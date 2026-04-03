@@ -8,3 +8,6 @@ build
 .turbo
 *.tsbuildinfo
 coverage
+.claude/settings.local.json
+.vscode/settings.json
+apps/api/scripts/*-result.json
