@@ -20,8 +20,12 @@ const envSchema = z.object({
 
   // Notifications
   RESEND_API_KEY: z.string().optional().default(''),
+  EMAIL_FROM_ADDRESS: z.string().min(1).default('Mouna AI <noreply@mounai.ai>'),
   APP_BASE_URL: z.string().optional().default('http://localhost:5173'),
-  NOTIFICATION_EMAIL: z.string().email().optional().default('info@aadhiraiinnovations.com'),
+  NOTIFICATION_EMAIL: z
+    .union([z.string().email(), z.literal('')])
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
 });
 
 function loadEnv() {

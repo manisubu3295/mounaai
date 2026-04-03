@@ -113,6 +113,7 @@ export interface UpdateRuleInput {
 export interface EvaluateRulesResult {
   rules_evaluated: number;
   rules_triggered: number;
+  insights_created: number;
   decisions_created: number;
   workflows_triggered: number;
   memories_set: number;
@@ -183,13 +184,34 @@ function evaluateLeaf(leaf: RuleConditionLeaf, data: Record<string, unknown>): b
   const actual = resolveField(data, leaf.field);
   const expected = leaf.value;
 
+  const coerceNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
   switch (leaf.operator) {
     case 'eq':          return actual == expected;
     case 'neq':         return actual != expected;
-    case 'gt':          return typeof actual === 'number' && actual > Number(expected);
-    case 'gte':         return typeof actual === 'number' && actual >= Number(expected);
-    case 'lt':          return typeof actual === 'number' && actual < Number(expected);
-    case 'lte':         return typeof actual === 'number' && actual <= Number(expected);
+    case 'gt': {
+      const actualNumber = coerceNumber(actual);
+      return actualNumber !== null && actualNumber > Number(expected);
+    }
+    case 'gte': {
+      const actualNumber = coerceNumber(actual);
+      return actualNumber !== null && actualNumber >= Number(expected);
+    }
+    case 'lt': {
+      const actualNumber = coerceNumber(actual);
+      return actualNumber !== null && actualNumber < Number(expected);
+    }
+    case 'lte': {
+      const actualNumber = coerceNumber(actual);
+      return actualNumber !== null && actualNumber <= Number(expected);
+    }
     case 'contains':    return typeof actual === 'string' && actual.includes(String(expected));
     case 'not_contains':return typeof actual === 'string' && !actual.includes(String(expected));
     case 'is_null':     return actual === null || actual === undefined;
@@ -220,7 +242,8 @@ async function executeAction(
   runId: string,
   triggeredField: string,
   connectorData: Record<string, unknown>
-): Promise<{ decisionsCreated: number; workflowsTriggered: number; memoriesSet: number }> {
+): Promise<{ insightsCreated: number; decisionsCreated: number; workflowsTriggered: number; memoriesSet: number }> {
+  let insightsCreated = 0;
   let decisionsCreated = 0;
   let workflowsTriggered = 0;
   let memoriesSet = 0;
@@ -248,6 +271,7 @@ async function executeAction(
           explanation:     insightExplanation,
         },
       });
+      insightsCreated++;
 
       const decisionExplanation = `This action was automatically triggered by the rule "${ruleName}" because a predefined business condition was met. Acting on this recommendation will address the detected issue before it escalates. Ignoring it may allow the underlying condition to worsen.`;
 
@@ -339,7 +363,7 @@ async function executeAction(
     }
   }
 
-  return { decisionsCreated, workflowsTriggered, memoriesSet };
+  return { insightsCreated, decisionsCreated, workflowsTriggered, memoriesSet };
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -472,10 +496,11 @@ export async function evaluateRulesForTenant(
   });
 
   if (!rules.length) {
-    return { rules_evaluated: 0, rules_triggered: 0, decisions_created: 0, workflows_triggered: 0, memories_set: 0 };
+    return { rules_evaluated: 0, rules_triggered: 0, insights_created: 0, decisions_created: 0, workflows_triggered: 0, memories_set: 0 };
   }
 
   let rulesTriggered = 0;
+  let insightsCreated = 0;
   let decisionsCreated = 0;
   let workflowsTriggered = 0;
   let memoriesSet = 0;
@@ -525,6 +550,7 @@ export async function evaluateRulesForTenant(
       );
 
       decisionsCreated  += result.decisionsCreated;
+  insightsCreated   += result.insightsCreated;
       workflowsTriggered += result.workflowsTriggered;
       memoriesSet        += result.memoriesSet;
 
@@ -574,12 +600,14 @@ export async function evaluateRulesForTenant(
     tenantId,
     rules_evaluated: rules.length,
     rules_triggered: rulesTriggered,
+    insights_created: insightsCreated,
     decisions_created: decisionsCreated,
   });
 
   return {
     rules_evaluated:    rules.length,
     rules_triggered:    rulesTriggered,
+    insights_created:   insightsCreated,
     decisions_created:  decisionsCreated,
     workflows_triggered: workflowsTriggered,
     memories_set:       memoriesSet,

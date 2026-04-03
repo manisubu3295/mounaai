@@ -23,6 +23,7 @@ import {
   connectorErrorEmailHtml,
 } from './email.service.js';
 import type { NotificationType } from '@prisma/client';
+import { auditLog } from './audit.service.js';
 
 // ─── Core fan-out ─────────────────────────────────────────────────────────────
 
@@ -100,8 +101,8 @@ async function sendNotification(opts: SendNotificationOpts): Promise<void> {
 
     if (!shouldSend) return;
 
-    // Use configured recipients, falling back to admin emails; always include the
-    // platform notification address (info@aadhiraiinnovations.com by default)
+    // Use configured recipients, falling back to admin emails. An optional
+    // NOTIFICATION_EMAIL can be added as a secondary recipient when configured.
     const tenantRecipients =
       prefs.email_recipients.length > 0
         ? prefs.email_recipients
@@ -111,12 +112,49 @@ async function sendNotification(opts: SendNotificationOpts): Promise<void> {
       ? [...new Set([...tenantRecipients, env.NOTIFICATION_EMAIL])]
       : tenantRecipients;
 
-    await sendEmail({ to: recipients, subject: emailSubject, html: emailHtml });
+    const result = await sendEmail({ to: recipients, subject: emailSubject, html: emailHtml });
+
+    await auditLog({
+      tenant_id: tenantId,
+      action: 'notification.email.send',
+      resource_type: 'notification',
+      resource_id: resourceId ?? null,
+      status: result.ok ? 'SUCCESS' : 'FAILURE',
+      payload: {
+        summary: result.ok
+          ? `Email sent for ${type.toLowerCase()} notification`
+          : `Email delivery failed for ${type.toLowerCase()} notification`,
+        notification_type: type,
+        subject: emailSubject,
+        to: recipients,
+        recipient_count: recipients.length,
+        from: env.EMAIL_FROM_ADDRESS,
+        provider: result.provider,
+        provider_status_code: result.statusCode ?? null,
+        error_message: result.error ?? null,
+        provider_response: result.providerResponse ?? null,
+      },
+    });
   } catch (err) {
     logger.warn('Notification service: email dispatch error', {
       tenantId,
       type,
       error: err instanceof Error ? err.message : String(err),
+    });
+
+    await auditLog({
+      tenant_id: tenantId,
+      action: 'notification.email.send',
+      resource_type: 'notification',
+      resource_id: resourceId ?? null,
+      status: 'FAILURE',
+      payload: {
+        summary: `Email dispatch crashed for ${type.toLowerCase()} notification`,
+        notification_type: type,
+        subject: emailSubject,
+        from: env.EMAIL_FROM_ADDRESS,
+        error_message: err instanceof Error ? err.message : String(err),
+      },
     });
   }
 }

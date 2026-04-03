@@ -75,7 +75,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
           </div>
         </div>
         <p className="text-[11px] text-[hsl(var(--text-disabled))] text-center mt-2">
-          PocketComputer may make mistakes. Verify important information.
+          Mouna AI may make mistakes. Verify important information.
         </p>
       </div>
     </div>

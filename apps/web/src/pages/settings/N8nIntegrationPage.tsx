@@ -222,7 +222,7 @@ export function N8nIntegrationPage() {
                 Integration Settings
               </CardTitle>
               <CardDescription>
-                Point PocketComputer at your self-hosted n8n instance and secure callbacks.
+                Point Mouna AI at your self-hosted n8n instance and secure callbacks.
               </CardDescription>
             </CardHeader>
             <CardContent>

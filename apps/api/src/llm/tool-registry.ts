@@ -88,7 +88,8 @@ export class ToolRegistry {
           name: toolName,
           description:
             `Fetch live data from API connector "${connector.name}" — ` +
-            `endpoint "${endpoint.name}" (${endpoint.method} ${connector.base_url}${endpoint.path_template}).`,
+            `endpoint "${endpoint.name}" (${endpoint.method} ${connector.base_url}${endpoint.path_template}).` +
+            (endpoint.description ? ` ${endpoint.description}` : ''),
           parameters: {
             type: 'object',
             properties,
@@ -124,11 +125,17 @@ export class ToolRegistry {
           };
         }
 
+        const parameterSummary = params.length > 0
+          ? ` Accepts parameters: ${params.map((p) => `${p.name} (${p.type})`).join(', ')}.`
+          : ' No parameters required.';
+
         tools.push({
           name: toolName,
           description:
             `Query "${connector.database_name}" (${connector.db_type}) via connector ` +
-            `"${connector.name}" — query template "${template.name}".`,
+            `"${connector.name}" — query template "${template.name}".` +
+            (template.description ? ` ${template.description}` : '') +
+            parameterSummary,
           parameters: {
             type: 'object',
             properties,

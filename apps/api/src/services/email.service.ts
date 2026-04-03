@@ -11,9 +11,9 @@
 import { httpClient } from '../lib/http-client.js';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
+import axios from 'axios';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
-const FROM_ADDRESS = 'Mouna AI <noreply@mounai.ai>';
 
 interface SendEmailParams {
   to: string[];
@@ -21,20 +21,32 @@ interface SendEmailParams {
   html: string;
 }
 
-export async function sendEmail(params: SendEmailParams): Promise<void> {
+export interface EmailSendResult {
+  ok: boolean;
+  provider: 'resend';
+  statusCode?: number;
+  error?: string;
+  providerResponse?: unknown;
+}
+
+export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
   if (!env.RESEND_API_KEY) {
     logger.debug('Email service: RESEND_API_KEY not configured, skipping email', {
       subject: params.subject,
       to: params.to,
     });
-    return;
+    return {
+      ok: false,
+      provider: 'resend',
+      error: 'RESEND_API_KEY not configured',
+    };
   }
 
   try {
-    await httpClient.post(
+    const response = await httpClient.post(
       RESEND_API_URL,
       {
-        from: FROM_ADDRESS,
+        from: env.EMAIL_FROM_ADDRESS,
         to: params.to,
         subject: params.subject,
         html: params.html,
@@ -52,13 +64,31 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
       subject: params.subject,
       recipients: params.to.length,
     });
+
+    return {
+      ok: true,
+      provider: 'resend',
+      statusCode: response.status,
+      providerResponse: response.data,
+    };
   } catch (err) {
     // Email failures are non-fatal — log and continue
     const message = err instanceof Error ? err.message : String(err);
+    const statusCode = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const providerResponse = axios.isAxiosError(err) ? err.response?.data : undefined;
     logger.warn('Email service: failed to send email', {
       subject: params.subject,
       error: message,
+      statusCode,
     });
+
+    return {
+      ok: false,
+      provider: 'resend',
+      statusCode,
+      error: message,
+      providerResponse,
+    };
   }
 }
 

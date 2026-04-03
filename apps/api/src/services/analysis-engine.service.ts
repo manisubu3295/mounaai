@@ -330,7 +330,7 @@ export async function executeAnalysisRun(
           status: 'COMPLETED',
           completed_at: new Date(),
           summary: {
-            insights_count: 0,
+            insights_count: rulesResult.insights_created,
             decisions_count: rulesResult.decisions_created,
             connector_errors: connectorErrors,
             rules_triggered: rulesResult.rules_triggered,
@@ -436,13 +436,14 @@ export async function executeAnalysisRun(
         status: 'COMPLETED',
         completed_at: new Date(),
         summary: {
-          insights_count:            insightIds.length,
+          insights_count:            insightIds.length + rulesResult.insights_created,
           decisions_count:           createdDecisionIds.length + rulesResult.decisions_created,
           decisions_auto_approved:   routing.auto_approved + rulesResult.decisions_created,
           decisions_review_required: routing.review_required,
           decisions_open:            routing.open,
           rules_evaluated:           rulesResult.rules_evaluated,
           rules_triggered:           rulesResult.rules_triggered,
+          rules_insights_created:    rulesResult.insights_created,
           rules_decisions_created:   rulesResult.decisions_created,
           connector_sources:         Object.keys(connectorData),
           connector_errors:          connectorErrors,
@@ -468,7 +469,7 @@ export async function executeAnalysisRun(
     void notifyAnalysisCompleted(
       tenantId,
       runId,
-      insightIds.length,
+      insightIds.length + rulesResult.insights_created,
       createdDecisionIds.length + rulesResult.decisions_created
     );
     if (connectorErrors.length > 0) {

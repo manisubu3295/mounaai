@@ -13,6 +13,8 @@ interface AuditEntry {
   status: 'SUCCESS' | 'FAILURE';
 }
 
+export type { AuditEntry };
+
 export async function auditLog(entry: AuditEntry): Promise<void> {
   try {
     await prisma.auditLog.create({

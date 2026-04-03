@@ -17,6 +17,7 @@ import { AuditPage } from '@/pages/settings/AuditPage';
 import { N8nIntegrationPage } from '@/pages/settings/N8nIntegrationPage';
 import { RulesPage } from '@/pages/settings/RulesPage';
 import { KPIsPage } from '@/pages/settings/KPIsPage';
+import { CommunicationPage } from '@/pages/settings/CommunicationPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { AnalysisRunDetailPage } from '@/pages/analysis/AnalysisRunDetailPage';
 import { Layout } from '@/components/shared/Layout';
@@ -26,8 +27,9 @@ function AuthGate() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--accent))] border-t-transparent" />
+      <div className="min-h-screen bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-3">
+        <div className="h-5 w-5 animate-spin rounded-full border-[1.5px] border-[hsl(var(--border-strong))] border-t-[hsl(var(--accent))]" />
+        <p className="text-[12px] text-[hsl(var(--text-disabled))] tracking-wide">Loading workspace…</p>
       </div>
     );
   }
@@ -40,8 +42,9 @@ function PublicOnly() {
   const { isAuthenticated, isLoading } = useAuthStore();
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--accent))] border-t-transparent" />
+      <div className="min-h-screen bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-3">
+        <div className="h-5 w-5 animate-spin rounded-full border-[1.5px] border-[hsl(var(--border-strong))] border-t-[hsl(var(--accent))]" />
+        <p className="text-[12px] text-[hsl(var(--text-disabled))] tracking-wide">Loading workspace…</p>
       </div>
     );
   }
@@ -103,6 +106,7 @@ export default function App() {
               <Route path="/settings/connectors" element={<ConnectorsPage />} />
               <Route path="/settings/rules" element={<RulesPage />} />
               <Route path="/settings/kpis" element={<KPIsPage />} />
+              <Route path="/settings/communication" element={<CommunicationPage />} />
               <Route path="/settings/audit" element={<AuditPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/analysis-runs/:id" element={<AnalysisRunDetailPage />} />

@@ -10,7 +10,9 @@ const config: Config = {
         background: 'hsl(var(--background))',
         surface: 'hsl(var(--surface))',
         'surface-2': 'hsl(var(--surface-2))',
+        'surface-3': 'hsl(var(--surface-3))',
         border: 'hsl(var(--border))',
+        'border-strong': 'hsl(var(--border-strong))',
         'text-primary': 'hsl(var(--text-primary))',
         'text-secondary': 'hsl(var(--text-secondary))',
         'text-disabled': 'hsl(var(--text-disabled))',
@@ -32,8 +34,9 @@ const config: Config = {
       },
       borderRadius: {
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 1px)',
+        sm: 'calc(var(--radius) - 2px)',
+        xl: 'calc(var(--radius) + 3px)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

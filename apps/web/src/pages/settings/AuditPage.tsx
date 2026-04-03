@@ -20,6 +20,16 @@ interface AuditLog {
   created_at: string;
 }
 
+function getLogSummary(log: AuditLog): string {
+  if (log.payload && typeof log.payload === 'object' && 'summary' in log.payload) {
+    const summary = (log.payload as { summary?: unknown }).summary;
+    if (typeof summary === 'string' && summary.trim().length > 0) return summary;
+  }
+
+  if (log.status === 'FAILURE') return 'Operation failed';
+  return 'Operation completed';
+}
+
 interface AuditResponse {
   items: AuditLog[];
   total: number;
@@ -81,6 +91,9 @@ function LogRow({ log }: { log: AuditLog }) {
         <td className="px-4 py-3 text-[11px] text-[hsl(var(--text-disabled))]">
           {log.ip_address ?? '—'}
         </td>
+        <td className="px-4 py-3 text-xs text-[hsl(var(--text-secondary))] max-w-[320px] truncate">
+          {getLogSummary(log)}
+        </td>
         <td className="px-4 py-3">
           {log.status === 'SUCCESS'
             ? <CheckCircle className="w-3.5 h-3.5 text-[hsl(var(--success))]" />
@@ -95,7 +108,7 @@ function LogRow({ log }: { log: AuditLog }) {
       </tr>
       {expanded && hasPayload && (
         <tr className="bg-[hsl(var(--background))] border-b border-[hsl(var(--border))]">
-          <td colSpan={7} className="px-4 py-3">
+          <td colSpan={8} className="px-4 py-3">
             <pre className="text-[11px] text-[hsl(var(--text-secondary))] font-mono overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(log.payload, null, 2)}
             </pre>
@@ -184,7 +197,7 @@ export function AuditPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[hsl(var(--surface-2))] border-b border-[hsl(var(--border))]">
-                {['Time', 'Action', 'User', 'Resource', 'IP', 'Status', ''].map((h) => (
+                {['Time', 'Action', 'User', 'Resource', 'IP', 'Summary', 'Status', ''].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-[hsl(var(--text-secondary))] uppercase tracking-wider">
                     {h}
                   </th>
@@ -194,14 +207,14 @@ export function AuditPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center">
+                  <td colSpan={8} className="px-4 py-8 text-center">
                     <Loader2 className="w-5 h-5 animate-spin text-[hsl(var(--text-secondary))] mx-auto" />
                   </td>
                 </tr>
               )}
               {!isLoading && data?.items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-[hsl(var(--text-disabled))]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-[hsl(var(--text-disabled))]">
                     No audit logs found.
                   </td>
                 </tr>

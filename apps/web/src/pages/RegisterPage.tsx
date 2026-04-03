@@ -42,7 +42,7 @@ export function RegisterPage() {
           <div className="w-8 h-8 rounded-xl bg-[hsl(var(--accent)/0.15)] border border-[hsl(var(--accent)/0.3)] flex items-center justify-center">
             <Zap className="w-4 h-4 text-[hsl(var(--accent-hover))]" />
           </div>
-          <span className="text-lg font-semibold">PocketComputer</span>
+          <span className="text-lg font-semibold">Mouna AI</span>
         </div>
 
         <Card>

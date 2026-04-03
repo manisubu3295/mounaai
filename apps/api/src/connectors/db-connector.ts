@@ -123,10 +123,16 @@ export class DbConnector implements IConnector {
     const client = await this.pool.connect();
     try {
       const result = await client.query<Record<string, unknown>>(template.sql_template, values);
+      const rowCount = result.rowCount ?? 0;
+      const firstRow = rowCount === 1 ? result.rows[0] ?? {} : {};
 
       return {
         raw: result.rows,
-        transformed: { rows: result.rows, row_count: result.rowCount ?? 0 } as Record<string, unknown>,
+        transformed: {
+          ...firstRow,
+          rows: result.rows,
+          row_count: rowCount,
+        } as Record<string, unknown>,
         connector_id: this.config.id,
         endpoint_name: template.name,
         latency_ms: Date.now() - start,
