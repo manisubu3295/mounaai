@@ -1,0 +1,118 @@
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client';
+import { useAuthStore } from '@/stores/auth.store';
+import { getMe, refreshToken } from '@/services/auth.service';
+import { setAccessToken } from '@/lib/api-client';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ChatPage } from '@/pages/ChatPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { InsightsPage } from '@/pages/insights/InsightsPage';
+import { DecisionCenterPage } from '@/pages/decisions/DecisionCenterPage';
+import { LLMConfigPage } from '@/pages/settings/LLMConfigPage';
+import { ConnectorsPage } from '@/pages/settings/ConnectorsPage';
+import { AuditPage } from '@/pages/settings/AuditPage';
+import { N8nIntegrationPage } from '@/pages/settings/N8nIntegrationPage';
+import { RulesPage } from '@/pages/settings/RulesPage';
+import { KPIsPage } from '@/pages/settings/KPIsPage';
+import { NotificationsPage } from '@/pages/NotificationsPage';
+import { AnalysisRunDetailPage } from '@/pages/analysis/AnalysisRunDetailPage';
+import { Layout } from '@/components/shared/Layout';
+
+function AuthGate() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--accent))] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
+function PublicOnly() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--accent))] border-t-transparent" />
+      </div>
+    );
+  }
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
+}
+
+export default function App() {
+  const { setAuth, clearAuth, setLoading } = useAuthStore();
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function bootstrap() {
+      setLoading(true);
+
+      try {
+        const token = await refreshToken();
+        setAccessToken(token);
+        const user = await getMe();
+
+        if (isActive) {
+          setAuth(user, token);
+        }
+      } catch {
+        if (isActive) {
+          clearAuth();
+        }
+      }
+    }
+
+    bootstrap();
+
+    return () => {
+      isActive = false;
+    };
+  }, [setAuth, clearAuth, setLoading]);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route element={<PublicOnly />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+
+          {/* Protected routes */}
+          <Route element={<AuthGate />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/insights" element={<InsightsPage />} />
+              <Route path="/decisions" element={<DecisionCenterPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:id" element={<ChatPage />} />
+              <Route path="/settings/llm" element={<LLMConfigPage />} />
+              <Route path="/settings/automation" element={<N8nIntegrationPage />} />
+              <Route path="/settings/connectors" element={<ConnectorsPage />} />
+              <Route path="/settings/rules" element={<RulesPage />} />
+              <Route path="/settings/kpis" element={<KPIsPage />} />
+              <Route path="/settings/audit" element={<AuditPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/analysis-runs/:id" element={<AnalysisRunDetailPage />} />
+            </Route>
+          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}

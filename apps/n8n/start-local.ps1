@@ -1,0 +1,18 @@
+$env:N8N_HOST = '127.0.0.1'
+$env:N8N_PORT = '5678'
+$env:N8N_PROTOCOL = 'http'
+$env:WEBHOOK_URL = 'http://127.0.0.1:5678/'
+$env:N8N_EDITOR_BASE_URL = 'http://127.0.0.1:5678/'
+$env:N8N_USER_FOLDER = 'D:/Aadhirai-web/pocketcomputer/apps/n8n/.n8n'
+$env:N8N_ENCRYPTION_KEY = '3f1e1c624d93438f9d7ca7f57f012d986ef2847b4d83fc01'
+$env:N8N_DIAGNOSTICS_ENABLED = 'false'
+$env:N8N_PERSONALIZATION_ENABLED = 'false'
+$env:N8N_SECURE_COOKIE = 'false'
+$env:DB_TYPE = 'postgresdb'
+$env:DB_POSTGRESDB_HOST = '127.0.0.1'
+$env:DB_POSTGRESDB_PORT = '5432'
+$env:DB_POSTGRESDB_DATABASE = 'n8n_local'
+$env:DB_POSTGRESDB_USER = 'postgres'
+$env:DB_POSTGRESDB_PASSWORD = 'admin123'
+
+pnpm --dir apps/n8n exec n8n start

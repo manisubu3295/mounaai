@@ -1,0 +1,137 @@
+[
+  {
+    "name": "PocketComputer Reminder Dispatch",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pocketcomputer-reminder",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "Webhook_Reminder",
+        "name": "Reminder Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "pocketcomputer-reminder"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const body = $json.body ?? {};\nconst payload = body.payload ?? {};\nconst recipients = Array.isArray(payload.recipients) ? payload.recipients : [];\nconst remindAt = payload.remind_at ? new Date(payload.remind_at).toLocaleString() : 'Now';\nconst lines = [\n  `REMINDER: ${payload.title ?? 'No Title'}`,\n  ``,\n  `${payload.message ?? ''}`,\n  ``,\n  `Scheduled for: ${remindAt}`,\n  `Recipients: ${recipients.join(', ') || 'None'}`,\n  `Related Decision ID: ${payload.related_decision_id ?? 'N/A'}`,\n  `Requested by: ${payload.requested_by_user_id ?? 'System'}`,\n  `Tenant: ${body.tenant_id ?? 'Unknown'}`\n];\nreturn [{\n  json: {\n    workflow_run_id: body.workflow_run_id,\n    tenant_id: body.tenant_id,\n    recipients,\n    title: payload.title,\n    message: payload.message,\n    remind_at: payload.remind_at,\n    related_decision_id: payload.related_decision_id,\n    formatted_text: lines.join('\\n')\n  }\n}];"
+        },
+        "id": "Code_Format_Reminder",
+        "name": "Format Reminder",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [520, 300]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://api:4000/api/v1/automation/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-PocketComputer-Callback-Secret",
+                "value": "REPLACE_WITH_CALLBACK_SECRET"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "workflow_run_id",
+                "value": "={{ $json.workflow_run_id }}"
+              },
+              {
+                "name": "status",
+                "value": "COMPLETED"
+              },
+              {
+                "name": "output",
+                "value": "={{ { recipients_count: $json.recipients.length, title: $json.title, remind_at: $json.remind_at } }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "HTTP_Callback",
+        "name": "Callback to PocketComputer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [800, 300],
+        "disabled": true,
+        "notes": "Enable and set X-PocketComputer-Callback-Secret from your n8n integration settings."
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"workflow_run_id\": \"{{ $json.workflow_run_id }}\",\n  \"recipients_count\": {{ $json.recipients.length }},\n  \"title\": \"{{ $json.title }}\"\n}",
+          "options": {}
+        },
+        "id": "Respond_Success",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [1080, 300]
+      }
+    ],
+    "connections": {
+      "Reminder Webhook": {
+        "main": [
+          [
+            {
+              "node": "Format Reminder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Reminder": {
+        "main": [
+          [
+            {
+              "node": "Callback to PocketComputer",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Callback to PocketComputer": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {},
+    "pinData": {},
+    "versionId": "a1b2c3d4-1111-4444-aaaa-111111111111",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    },
+    "id": "PocketComputerReminderDispatch",
+    "tags": []
+  }
+]

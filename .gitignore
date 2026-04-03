@@ -1,0 +1,10 @@
+apps/n8n/.n8n/
+apps/n8n/.cache/
+node_modules
+dist
+build
+.env
+*.env.local
+.turbo
+*.tsbuildinfo
+coverage

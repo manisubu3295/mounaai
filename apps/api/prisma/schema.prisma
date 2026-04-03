@@ -1,0 +1,851 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum PlanTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  TENANT_ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum ChatStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum AuthType {
+  NONE
+  BEARER
+  API_KEY
+  BASIC
+  OAUTH2_CLIENT
+}
+
+enum DbType {
+  POSTGRESQL
+  MYSQL
+}
+
+enum ConnectorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TestStatus {
+  UNTESTED
+  OK
+  FAILED
+}
+
+enum ConnectorType {
+  API
+  DB
+  FILE
+}
+
+enum ToolRunStatus {
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum MaskingStrategy {
+  FULL_REDACT
+  PARTIAL_MASK
+  TOKENIZE
+}
+
+enum MatchType {
+  FIELD_NAME
+  REGEX
+  GLOB
+}
+
+enum SslMode {
+  DISABLE
+  REQUIRE
+  VERIFY_CA
+  VERIFY_FULL
+}
+
+enum KpiStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AnalysisRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum InsightType {
+  RISK
+  OPPORTUNITY
+  INEFFICIENCY
+  WATCH
+}
+
+enum InsightSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum DecisionStatus {
+  OPEN
+  APPROVAL_REQUIRED
+  APPROVED
+  REJECTED
+  TRIGGERED
+  COMPLETED
+}
+
+enum DecisionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkflowRunStatus {
+  REQUESTED
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMED_OUT
+}
+
+enum MemoryCategory {
+  SUPPLIER_PREFERENCE
+  BUSINESS_RULE
+  CUSTOMER_INSIGHT
+  OPERATIONAL_PATTERN
+  PRODUCT_PREFERENCE
+  FINANCIAL_RULE
+  CONTACT_INFO
+  AI_LEARNING
+}
+
+enum MemorySource {
+  USER_EXPLICIT
+  AI_INFERRED
+  SYSTEM_OBSERVED
+}
+
+enum RuleActionType {
+  CREATE_DECISION
+  TRIGGER_WORKFLOW
+  SEND_ALERT
+  SET_MEMORY
+}
+
+enum RuleExecutionStatus {
+  TRIGGERED
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum NotificationType {
+  INSIGHT_CRITICAL
+  INSIGHT_WARNING
+  DECISION_APPROVAL_REQUIRED
+  RULE_TRIGGERED
+  CONNECTOR_ERROR
+  ANALYSIS_COMPLETED
+  ANALYSIS_FAILED
+  SYSTEM
+}
+
+// ─── Tenants ──────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id         String       @id @default(uuid())
+  name       String
+  slug       String       @unique
+  plan       PlanTier     @default(FREE)
+  status     TenantStatus @default(ACTIVE)
+  settings   Json         @default("{}")
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+
+  users              User[]
+  chats              Chat[]
+  provider_configs   ProviderConfig[]
+  api_connectors     ApiConnector[]
+  db_connectors      DbConnector[]
+  masking_rules      MaskingRule[]
+  audit_logs         AuditLog[]
+  upgrade_requests   UpgradeRequest[]
+  kpi_definitions    KpiDefinition[]
+  analysis_runs      AnalysisRun[]
+  generated_insights GeneratedInsight[]
+  decision_points    DecisionPoint[]
+  n8n_integration    N8nIntegration?
+  automation_workflows AutomationWorkflow[]
+  workflow_runs      WorkflowRun[]
+  business_memories  BusinessMemory[]
+  autonomy_config    AutonomyConfig?
+  business_rules     BusinessRule[]
+  notifications             Notification[]
+  notification_preference   NotificationPreference?
+  file_connectors    FileConnector[]
+
+  @@map("tenants")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String     @id @default(uuid())
+  tenant_id       String
+  email           String
+  password_hash   String
+  full_name       String?
+  role            UserRole
+  status          UserStatus @default(ACTIVE)
+  failed_attempts Int        @default(0)
+  locked_until    DateTime?
+  last_login_at   DateTime?
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+
+  tenant         Tenant         @relation(fields: [tenant_id], references: [id])
+  refresh_tokens RefreshToken[]
+  chats          Chat[]
+  audit_logs     AuditLog[]
+  upgrade_requests UpgradeRequest[]
+  initiated_analysis_runs AnalysisRun[] @relation("AnalysisRunInitiator")
+  approved_decisions      DecisionPoint[] @relation("DecisionApprover")
+  notifications           Notification[]
+
+  @@unique([tenant_id, email])
+  @@map("users")
+}
+
+// ─── Refresh Tokens ───────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  user_id    String
+  tenant_id  String
+  token_hash String   @unique
+  family_id  String
+  is_valid   Boolean  @default(true)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([family_id])
+  @@map("refresh_tokens")
+}
+
+// ─── Chats ────────────────────────────────────────────────────────────────────
+
+model Chat {
+  id         String     @id @default(uuid())
+  tenant_id  String
+  user_id    String
+  title      String     @default("New Chat")
+  status     ChatStatus @default(ACTIVE)
+  metadata   Json       @default("{}")
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenant_id], references: [id])
+  user     User          @relation(fields: [user_id], references: [id])
+  messages ChatMessage[]
+  tool_runs ToolRun[]
+
+  @@index([user_id, tenant_id, status])
+  @@map("chats")
+}
+
+// ─── Chat Messages ────────────────────────────────────────────────────────────
+
+model ChatMessage {
+  id          String      @id @default(uuid())
+  chat_id     String
+  tenant_id   String
+  role        MessageRole
+  content     String
+  token_count Int?
+  tool_run_id String?
+  model_used  String?
+  latency_ms  Int?
+  metadata    Json        @default("{}")
+  created_at  DateTime    @default(now())
+
+  chat Chat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+
+  @@index([chat_id])
+  @@map("chat_messages")
+}
+
+// ─── LLM Providers ───────────────────────────────────────────────────────────
+
+model LlmProvider {
+  id          String @id @default(uuid())
+  name        String @unique
+  default_url String
+  is_active   Boolean @default(true)
+
+  configs ProviderConfig[]
+
+  @@map("llm_providers")
+}
+
+// ─── Provider Configs ─────────────────────────────────────────────────────────
+
+model ProviderConfig {
+  id             String     @id @default(uuid())
+  tenant_id      String
+  provider_id    String
+  api_key_enc    String
+  base_url       String?
+  model          String     @default("gemini-1.5-pro")
+  temperature    Float      @default(0.7)
+  max_tokens     Int        @default(2048)
+  timeout_ms     Int        @default(30000)
+  is_active      Boolean    @default(true)
+  test_status    TestStatus @default(UNTESTED)
+  last_tested_at DateTime?
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+
+  tenant   Tenant      @relation(fields: [tenant_id], references: [id])
+  provider LlmProvider @relation(fields: [provider_id], references: [id])
+
+  @@unique([tenant_id, provider_id])
+  @@map("provider_configs")
+}
+
+// ─── API Connectors ───────────────────────────────────────────────────────────
+
+model ApiConnector {
+  id              String          @id @default(uuid())
+  tenant_id       String
+  name            String
+  description     String?
+  base_url        String
+  auth_type       AuthType
+  auth_config_enc String?
+  default_headers Json            @default("{}")
+  status          ConnectorStatus @default(ACTIVE)
+  test_status     TestStatus      @default(UNTESTED)
+  last_tested_at  DateTime?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  tenant    Tenant                @relation(fields: [tenant_id], references: [id])
+  endpoints ApiConnectorEndpoint[]
+
+  @@map("api_connectors")
+}
+
+model ApiConnectorEndpoint {
+  id           String  @id @default(uuid())
+  connector_id String
+  tenant_id    String
+  name         String
+  description  String?
+  method       String  @default("GET")
+  path_template String
+  query_params Json    @default("{}")
+  body_template Json?
+  timeout_ms   Int     @default(10000)
+  retry_count  Int     @default(1)
+
+  connector ApiConnector @relation(fields: [connector_id], references: [id], onDelete: Cascade)
+
+  @@map("api_connector_endpoints")
+}
+
+// ─── DB Connectors ────────────────────────────────────────────────────────────
+
+model DbConnector {
+  id            String          @id @default(uuid())
+  tenant_id     String
+  name          String
+  db_type       DbType
+  host          String
+  port          Int
+  database_name String
+  username_enc  String
+  password_enc  String
+  ssl_mode      SslMode         @default(REQUIRE)
+  status        ConnectorStatus @default(ACTIVE)
+  test_status   TestStatus      @default(UNTESTED)
+  last_tested_at DateTime?
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  tenant          Tenant                @relation(fields: [tenant_id], references: [id])
+  query_templates DbQueryTemplate[]
+
+  @@map("db_connectors")
+}
+
+model FileConnector {
+  id          String          @id @default(uuid())
+  tenant_id   String
+  name        String
+  description String?
+  file_name   String
+  headers     String[]
+  row_count   Int             @default(0)
+  data        Json            @default("[]")
+  status      ConnectorStatus @default(ACTIVE)
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@map("file_connectors")
+}
+
+model DbQueryTemplate {
+  id           String @id @default(uuid())
+  connector_id String
+  tenant_id    String
+  name         String
+  description  String?
+  sql_template String
+  params       Json   @default("[]")
+  timeout_ms   Int    @default(5000)
+
+  connector DbConnector @relation(fields: [connector_id], references: [id], onDelete: Cascade)
+
+  @@map("db_query_templates")
+}
+
+// ─── Schema Mappings ──────────────────────────────────────────────────────────
+
+model ConnectorSchemaMapping {
+  id             String        @id @default(uuid())
+  connector_id   String        @unique
+  connector_type ConnectorType
+  tenant_id      String
+  field_mappings Json          @default("[]")
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  @@index([tenant_id, connector_type])
+  @@map("connector_schema_mappings")
+}
+
+// ─── Masking Rules ────────────────────────────────────────────────────────────
+
+model MaskingRule {
+  id            String          @id @default(uuid())
+  tenant_id     String
+  name          String
+  match_type    MatchType
+  match_pattern String
+  strategy      MaskingStrategy
+  mask_config   Json            @default("{}")
+  priority      Int             @default(100)
+  is_active     Boolean         @default(true)
+  created_at    DateTime        @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id, is_active, priority])
+  @@map("masking_rules")
+}
+
+// ─── Tool Runs ────────────────────────────────────────────────────────────────
+
+model ToolRun {
+  id             String        @id @default(uuid())
+  tenant_id      String
+  chat_id        String
+  message_id     String?
+  connector_id   String
+  connector_type ConnectorType
+  endpoint_name  String?
+  params_used    Json          @default("{}")
+  status         ToolRunStatus
+  latency_ms     Int?
+  masked_fields  Json          @default("[]")
+  error_message  String?
+  created_at     DateTime      @default(now())
+
+  chat Chat @relation(fields: [chat_id], references: [id])
+
+  @@index([chat_id])
+  @@map("tool_runs")
+}
+
+// ─── KPI and Decision Intelligence ───────────────────────────────────────────
+
+model KpiDefinition {
+  id                 String    @id @default(uuid())
+  tenant_id          String
+  name               String
+  slug               String
+  description        String?
+  formula            String
+  unit               String?
+  target_value       Float?
+  warning_threshold  Float?
+  critical_threshold Float?
+  owner_role         UserRole?
+  status             KpiStatus @default(DRAFT)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, status])
+  @@map("kpi_definitions")
+}
+
+model AnalysisRun {
+  id                   String            @id @default(uuid())
+  tenant_id            String
+  initiated_by_user_id String?
+  status               AnalysisRunStatus @default(QUEUED)
+  started_at           DateTime?
+  completed_at         DateTime?
+  summary              Json              @default("{}")
+  created_at           DateTime          @default(now())
+
+  tenant            Tenant             @relation(fields: [tenant_id], references: [id])
+  initiated_by_user User?              @relation("AnalysisRunInitiator", fields: [initiated_by_user_id], references: [id])
+  insights          GeneratedInsight[]
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@map("analysis_runs")
+}
+
+model GeneratedInsight {
+  id              String          @id @default(uuid())
+  tenant_id       String
+  analysis_run_id String
+  title           String
+  summary         String
+  type            InsightType
+  severity        InsightSeverity
+  confidence      Float?
+  evidence        Json            @default("{}")
+  explanation     String?
+  created_at      DateTime        @default(now())
+
+  tenant       Tenant        @relation(fields: [tenant_id], references: [id])
+  analysis_run AnalysisRun   @relation(fields: [analysis_run_id], references: [id], onDelete: Cascade)
+  decisions    DecisionPoint[]
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([analysis_run_id])
+  @@map("generated_insights")
+}
+
+model DecisionPoint {
+  id                  String           @id @default(uuid())
+  tenant_id           String
+  insight_id          String
+  title               String
+  recommendation      String
+  status              DecisionStatus   @default(OPEN)
+  priority            DecisionPriority @default(MEDIUM)
+  confidence          Float?
+  owner_role          UserRole?
+  approved_by_user_id String?
+  approved_at         DateTime?
+  triggered_at        DateTime?
+  completed_at        DateTime?
+  explanation         String?
+  reasoning_chain     Json?
+  triggered_source    String?
+  feedback_notes      String?
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+
+  tenant           Tenant  @relation(fields: [tenant_id], references: [id])
+  insight          GeneratedInsight @relation(fields: [insight_id], references: [id], onDelete: Cascade)
+  approved_by_user User?   @relation("DecisionApprover", fields: [approved_by_user_id], references: [id])
+
+  @@index([tenant_id, status, priority])
+  @@index([insight_id])
+  @@map("decision_points")
+}
+
+model N8nIntegration {
+  id                  String   @id @default(uuid())
+  tenant_id           String   @unique
+  base_url            String
+  api_key_enc         String?
+  callback_secret_enc String?
+  timeout_ms          Int      @default(15000)
+  is_enabled          Boolean  @default(false)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  tenant            Tenant               @relation(fields: [tenant_id], references: [id])
+  workflows         AutomationWorkflow[]
+  workflow_runs     WorkflowRun[]
+
+  @@map("n8n_integrations")
+}
+
+model AutomationWorkflow {
+  id               String   @id @default(uuid())
+  tenant_id        String
+  integration_id   String
+  key              String
+  name             String
+  description      String?
+  webhook_path     String
+  workflow_version String   @default("v1")
+  is_enabled       Boolean  @default(false)
+  trigger_source   String   @default("EVENT")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenant_id], references: [id])
+  integration   N8nIntegration @relation(fields: [integration_id], references: [id], onDelete: Cascade)
+  workflow_runs WorkflowRun[]
+
+  @@unique([tenant_id, key])
+  @@index([tenant_id, is_enabled])
+  @@map("automation_workflows")
+}
+
+model WorkflowRun {
+  id               String            @id @default(uuid())
+  tenant_id        String
+  integration_id   String
+  workflow_id      String?
+  workflow_key     String
+  workflow_version String
+  trigger_event    String
+  status           WorkflowRunStatus @default(REQUESTED)
+  external_run_id  String?
+  request_payload  Json              @default("{}")
+  response_payload Json?
+  error_message    String?
+  started_at       DateTime?
+  completed_at     DateTime?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+
+  tenant      Tenant             @relation(fields: [tenant_id], references: [id])
+  integration N8nIntegration     @relation(fields: [integration_id], references: [id], onDelete: Cascade)
+  workflow    AutomationWorkflow? @relation(fields: [workflow_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([workflow_key, status])
+  @@map("workflow_runs")
+}
+
+// ─── Business Memory ──────────────────────────────────────────────────────────
+
+model BusinessMemory {
+  id               String         @id @default(uuid())
+  tenant_id        String
+  category         MemoryCategory
+  key              String
+  value            String
+  source           MemorySource   @default(AI_INFERRED)
+  confidence       Float          @default(1.0)
+  tags             Json           @default("[]")
+  access_count     Int            @default(0)
+  last_accessed_at DateTime?
+  expires_at       DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, key])
+  @@index([tenant_id, category])
+  @@index([tenant_id, expires_at])
+  @@map("business_memories")
+}
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  tenant_id     String
+  user_id       String?
+  action        String
+  resource_type String?
+  resource_id   String?
+  ip_address    String?
+  user_agent    String?
+  payload       Json        @default("{}")
+  status        AuditStatus
+  created_at    DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  user   User?  @relation(fields: [user_id], references: [id])
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([user_id])
+  @@map("audit_logs")
+}
+
+// ─── Upgrade ──────────────────────────────────────────────────────────────────
+
+model UpgradeRequest {
+  id                String   @id @default(uuid())
+  tenant_id         String
+  user_id           String
+  feature_attempted String?
+  whatsapp_opened   Boolean  @default(false)
+  created_at        DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  user   User   @relation(fields: [user_id], references: [id])
+
+  @@map("upgrade_requests")
+}
+
+// ─── Autonomy ──────────────────────────────────────────────────────────────────
+
+model AutonomyConfig {
+  id                        String   @id @default(uuid())
+  tenant_id                 String   @unique
+  auto_analysis_enabled     Boolean  @default(false)
+  analysis_interval_minutes Int      @default(360)
+  auto_approve_threshold    Float    @default(0.85)
+  review_threshold          Float    @default(0.60)
+  max_auto_actions_per_run  Int      @default(5)
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("autonomy_configs")
+}
+
+// ─── Business Rules Engine ────────────────────────────────────────────────────
+
+model BusinessRule {
+  id                String         @id @default(uuid())
+  tenant_id         String
+  name              String
+  description       String?
+  is_active         Boolean        @default(true)
+  priority          Int            @default(100)
+  // Condition tree stored as JSON — see RuleConditionNode types in service layer
+  condition         Json
+  action_type       RuleActionType
+  action_config     Json           @default("{}")
+  last_evaluated_at DateTime?
+  last_triggered_at DateTime?
+  trigger_count     Int            @default(0)
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  tenant     Tenant          @relation(fields: [tenant_id], references: [id])
+  executions RuleExecution[]
+
+  @@index([tenant_id, is_active, priority])
+  @@map("business_rules")
+}
+
+model RuleExecution {
+  id               String              @id @default(uuid())
+  tenant_id        String
+  rule_id          String
+  status           RuleExecutionStatus
+  triggered_by     String
+  context_snapshot Json                @default("{}")
+  action_result    Json?
+  error_message    String?
+  created_at       DateTime            @default(now())
+
+  rule BusinessRule @relation(fields: [rule_id], references: [id], onDelete: Cascade)
+
+  @@index([rule_id, created_at(sort: Desc)])
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@map("rule_executions")
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id            String           @id @default(uuid())
+  tenant_id     String
+  user_id       String?          // null = tenant-wide (all admins)
+  title         String
+  body          String
+  type          NotificationType
+  resource_type String?          // 'insight' | 'decision' | 'rule' | 'run'
+  resource_id   String?
+  is_read       Boolean          @default(false)
+  read_at       DateTime?
+  created_at    DateTime         @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  user   User?  @relation(fields: [user_id], references: [id])
+
+  @@index([tenant_id, is_read, created_at(sort: Desc)])
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                          String   @id @default(uuid())
+  tenant_id                   String   @unique
+  email_enabled               Boolean  @default(true)
+  email_recipients            String[] @default([])
+  notify_on_critical          Boolean  @default(true)
+  notify_on_warning           Boolean  @default(false)
+  notify_on_rule_trigger      Boolean  @default(true)
+  notify_on_approval_required Boolean  @default(true)
+  notify_on_connector_error   Boolean  @default(true)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("notification_preferences")
+}

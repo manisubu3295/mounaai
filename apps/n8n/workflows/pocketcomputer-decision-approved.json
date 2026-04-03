@@ -1,0 +1,175 @@
+[
+  {
+    "name": "PocketComputer Decision Approved",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pocketcomputer-decision-approved",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "Webhook_Decision_Approved",
+        "name": "Decision Approved Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "pocketcomputer-decision-approved"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const body = $json.body ?? {};\nconst payload = body.payload ?? {};\nconst lines = [\n  `DECISION APPROVED`,\n  ``,\n  `Decision ID:     ${payload.decision_id ?? 'N/A'}`,\n  `Title:           ${payload.title ?? 'N/A'}`,\n  `Recommendation:  ${payload.recommendation ?? 'N/A'}`,\n  `Priority:        ${payload.priority ?? 'N/A'}`,\n  `Approved by:     ${payload.approved_by_user_id ?? 'System'}`,\n  `Approved at:     ${payload.approved_at ?? body.triggered_at ?? 'N/A'}`,\n  `Tenant:          ${body.tenant_id ?? 'Unknown'}`\n];\nreturn [{\n  json: {\n    workflow_run_id: body.workflow_run_id,\n    tenant_id: body.tenant_id,\n    decision_id: payload.decision_id,\n    title: payload.title,\n    recommendation: payload.recommendation,\n    priority: payload.priority,\n    approved_by_user_id: payload.approved_by_user_id,\n    approved_at: payload.approved_at,\n    formatted_text: lines.join('\\n')\n  }\n}];"
+        },
+        "id": "Code_Format_Decision_Approved",
+        "name": "Format Decision Approved",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [520, 300]
+      },
+      {
+        "parameters": {
+          "subject": "=Decision Approved: {{ $json.title }}",
+          "emailType": "text",
+          "message": "={{ $json.formatted_text }}",
+          "toEmail": "=REPLACE_WITH_STAKEHOLDER_EMAIL",
+          "options": {}
+        },
+        "id": "Email_Notify_Approved",
+        "name": "Notify Stakeholders",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [800, 180],
+        "credentials": {
+          "smtp": {
+            "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+            "name": "SMTP account"
+          }
+        },
+        "disabled": true,
+        "notes": "Enable after adding SMTP credentials. Set recipient email to stakeholder address."
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://api:4000/api/v1/automation/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-PocketComputer-Callback-Secret",
+                "value": "REPLACE_WITH_CALLBACK_SECRET"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "workflow_run_id",
+                "value": "={{ $json.workflow_run_id }}"
+              },
+              {
+                "name": "status",
+                "value": "COMPLETED"
+              },
+              {
+                "name": "output",
+                "value": "={{ { decision_id: $json.decision_id, title: $json.title, action: 'approved' } }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "HTTP_Callback",
+        "name": "Callback to PocketComputer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [800, 420],
+        "disabled": true,
+        "notes": "Enable and set X-PocketComputer-Callback-Secret from your n8n integration settings."
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"workflow_run_id\": \"{{ $json.workflow_run_id }}\",\n  \"decision_id\": \"{{ $json.decision_id }}\",\n  \"action\": \"approved\"\n}",
+          "options": {}
+        },
+        "id": "Respond_Success",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [1080, 300]
+      }
+    ],
+    "connections": {
+      "Decision Approved Webhook": {
+        "main": [
+          [
+            {
+              "node": "Format Decision Approved",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Decision Approved": {
+        "main": [
+          [
+            {
+              "node": "Notify Stakeholders",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Callback to PocketComputer",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notify Stakeholders": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Callback to PocketComputer": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {},
+    "pinData": {},
+    "versionId": "b2c3d4e5-2222-4444-bbbb-222222222222",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    },
+    "id": "PocketComputerDecisionApproved",
+    "tags": []
+  }
+]

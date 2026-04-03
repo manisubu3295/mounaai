@@ -1,0 +1,6 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "Test-NetConnection": true,
+        "Get-NetTCPConnection": true
+    }
+}

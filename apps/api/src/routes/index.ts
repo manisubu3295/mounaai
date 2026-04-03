@@ -1,0 +1,34 @@
+import { Router, type Router as ExpressRouter } from 'express';
+import { authRouter } from '../controllers/auth.controller.js';
+import { chatRouter } from '../controllers/chat.controller.js';
+import { configRouter } from '../controllers/config.controller.js';
+import { connectorRouter } from '../controllers/connector.controller.js';
+import { auditRouter } from '../controllers/audit.controller.js';
+import { upgradeRouter } from '../controllers/upgrade.controller.js';
+import { kpiRouter } from '../controllers/kpi.controller.js';
+import { analysisRouter } from '../controllers/analysis.controller.js';
+import { insightRouter } from '../controllers/insight.controller.js';
+import { decisionRouter } from '../controllers/decision.controller.js';
+import { automationRouter } from '../controllers/automation.controller.js';
+import { autonomyRouter } from '../controllers/autonomy.controller.js';
+import { rulesRouter } from '../controllers/rules.controller.js';
+import { notificationRouter } from '../controllers/notification.controller.js';
+import { userRouter } from '../controllers/user.controller.js';
+
+export const apiRouter: ExpressRouter = Router();
+
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/chats', chatRouter);
+apiRouter.use('/settings', configRouter);
+apiRouter.use('/connectors', connectorRouter);
+apiRouter.use('/audit', auditRouter);
+apiRouter.use('/upgrade', upgradeRouter);
+apiRouter.use('/kpis', kpiRouter);
+apiRouter.use('/analysis-runs', analysisRouter);
+apiRouter.use('/insights', insightRouter);
+apiRouter.use('/decisions', decisionRouter);
+apiRouter.use('/automation', automationRouter);
+apiRouter.use('/autonomy', autonomyRouter);
+apiRouter.use('/rules', rulesRouter);
+apiRouter.use('/notifications', notificationRouter);
+apiRouter.use('/users', userRouter);

@@ -1,0 +1,164 @@
+[
+  {
+    "name": "PocketComputer Analysis Run Requested",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pocketcomputer-analysis-run",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "Webhook_Analysis_Run",
+        "name": "Analysis Run Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "pocketcomputer-analysis-run"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const body = $json.body ?? {};\nconst payload = body.payload ?? {};\nconst lines = [\n  `ANALYSIS RUN REQUESTED`,\n  ``,\n  `Analysis Run ID: ${payload.analysis_run_id ?? 'N/A'}`,\n  `Trigger:         ${payload.trigger ?? 'MANUAL'}`,\n  `Requested by:    ${payload.requested_by_user_id ?? 'System'}`,\n  `Triggered at:    ${body.triggered_at ?? 'N/A'}`,\n  `Tenant:          ${body.tenant_id ?? 'Unknown'}`,\n  ``,\n  `This analysis run has been queued. Results will be posted back via callback.`\n];\nreturn [{\n  json: {\n    workflow_run_id: body.workflow_run_id,\n    tenant_id: body.tenant_id,\n    analysis_run_id: payload.analysis_run_id,\n    trigger: payload.trigger,\n    requested_by_user_id: payload.requested_by_user_id,\n    triggered_at: body.triggered_at,\n    formatted_text: lines.join('\\n')\n  }\n}];"
+        },
+        "id": "Code_Format_Analysis_Run",
+        "name": "Format Analysis Run",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [520, 300]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "// Placeholder: add your external analysis trigger logic here.\n// e.g. call a data pipeline, ML service, or ETL system.\n// Return a run ID from the external system if available.\nreturn [{\n  json: {\n    ...($json),\n    external_run_id: null,\n    external_status: 'submitted'\n  }\n}];"
+        },
+        "id": "Code_Trigger_External",
+        "name": "Trigger External Analysis",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [800, 180],
+        "notes": "Replace this node's logic with your actual external analysis system call (e.g. HTTP request to a data pipeline or ML API)."
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://api:4000/api/v1/automation/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-PocketComputer-Callback-Secret",
+                "value": "REPLACE_WITH_CALLBACK_SECRET"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "workflow_run_id",
+                "value": "={{ $json.workflow_run_id }}"
+              },
+              {
+                "name": "status",
+                "value": "RUNNING"
+              },
+              {
+                "name": "external_run_id",
+                "value": "={{ $json.external_run_id }}"
+              },
+              {
+                "name": "output",
+                "value": "={{ { analysis_run_id: $json.analysis_run_id, external_status: $json.external_status } }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "HTTP_Callback",
+        "name": "Callback to PocketComputer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [800, 420],
+        "disabled": true,
+        "notes": "Enable and set X-PocketComputer-Callback-Secret from your n8n integration settings."
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"workflow_run_id\": \"{{ $json.workflow_run_id }}\",\n  \"analysis_run_id\": \"{{ $json.analysis_run_id }}\",\n  \"external_run_id\": {{ $json.external_run_id !== null ? '\"' + $json.external_run_id + '\"' : 'null' }},\n  \"status\": \"running\"\n}",
+          "options": {}
+        },
+        "id": "Respond_Success",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [1080, 300]
+      }
+    ],
+    "connections": {
+      "Analysis Run Webhook": {
+        "main": [
+          [
+            {
+              "node": "Format Analysis Run",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Analysis Run": {
+        "main": [
+          [
+            {
+              "node": "Trigger External Analysis",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Callback to PocketComputer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trigger External Analysis": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Callback to PocketComputer": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {},
+    "pinData": {},
+    "versionId": "d4e5f6a7-4444-4444-dddd-444444444444",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    },
+    "id": "PocketComputerAnalysisRunRequested",
+    "tags": []
+  }
+]

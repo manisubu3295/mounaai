@@ -1,0 +1,175 @@
+[
+  {
+    "name": "PocketComputer Decision Rejected",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pocketcomputer-decision-rejected",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "Webhook_Decision_Rejected",
+        "name": "Decision Rejected Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "pocketcomputer-decision-rejected"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const body = $json.body ?? {};\nconst payload = body.payload ?? {};\nconst lines = [\n  `DECISION REJECTED — ACTION REQUIRED`,\n  ``,\n  `Decision ID:     ${payload.decision_id ?? 'N/A'}`,\n  `Title:           ${payload.title ?? 'N/A'}`,\n  `Recommendation:  ${payload.recommendation ?? 'N/A'}`,\n  `Priority:        ${payload.priority ?? 'N/A'}`,\n  `Rejected by:     ${payload.rejected_by_user_id ?? 'System'}`,\n  `Rejected at:     ${payload.rejected_at ?? body.triggered_at ?? 'N/A'}`,\n  ``,\n  `Please review and escalate if necessary.`,\n  `Tenant: ${body.tenant_id ?? 'Unknown'}`\n];\nreturn [{\n  json: {\n    workflow_run_id: body.workflow_run_id,\n    tenant_id: body.tenant_id,\n    decision_id: payload.decision_id,\n    title: payload.title,\n    recommendation: payload.recommendation,\n    priority: payload.priority,\n    rejected_by_user_id: payload.rejected_by_user_id,\n    rejected_at: payload.rejected_at,\n    formatted_text: lines.join('\\n')\n  }\n}];"
+        },
+        "id": "Code_Format_Decision_Rejected",
+        "name": "Format Decision Rejected",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [520, 300]
+      },
+      {
+        "parameters": {
+          "subject": "=Action Required — Decision Rejected: {{ $json.title }}",
+          "emailType": "text",
+          "message": "={{ $json.formatted_text }}",
+          "toEmail": "=REPLACE_WITH_ESCALATION_EMAIL",
+          "options": {}
+        },
+        "id": "Email_Escalate_Rejected",
+        "name": "Escalate Rejection",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [800, 180],
+        "credentials": {
+          "smtp": {
+            "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+            "name": "SMTP account"
+          }
+        },
+        "disabled": true,
+        "notes": "Enable after adding SMTP credentials. Set recipient to escalation/manager email."
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://api:4000/api/v1/automation/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-PocketComputer-Callback-Secret",
+                "value": "REPLACE_WITH_CALLBACK_SECRET"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "workflow_run_id",
+                "value": "={{ $json.workflow_run_id }}"
+              },
+              {
+                "name": "status",
+                "value": "COMPLETED"
+              },
+              {
+                "name": "output",
+                "value": "={{ { decision_id: $json.decision_id, title: $json.title, action: 'rejected' } }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "HTTP_Callback",
+        "name": "Callback to PocketComputer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [800, 420],
+        "disabled": true,
+        "notes": "Enable and set X-PocketComputer-Callback-Secret from your n8n integration settings."
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"workflow_run_id\": \"{{ $json.workflow_run_id }}\",\n  \"decision_id\": \"{{ $json.decision_id }}\",\n  \"action\": \"rejected\"\n}",
+          "options": {}
+        },
+        "id": "Respond_Success",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [1080, 300]
+      }
+    ],
+    "connections": {
+      "Decision Rejected Webhook": {
+        "main": [
+          [
+            {
+              "node": "Format Decision Rejected",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Decision Rejected": {
+        "main": [
+          [
+            {
+              "node": "Escalate Rejection",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Callback to PocketComputer",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Escalate Rejection": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Callback to PocketComputer": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {},
+    "pinData": {},
+    "versionId": "c3d4e5f6-3333-4444-cccc-333333333333",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    },
+    "id": "PocketComputerDecisionRejected",
+    "tags": []
+  }
+]

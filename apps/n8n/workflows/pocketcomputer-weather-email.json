@@ -1,0 +1,127 @@
+[
+  {
+    "name": "PocketComputer Weather Email",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pocketcomputer-weather-email",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "Webhook_Weather_Email",
+        "name": "Weather Email Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "pocketcomputer-weather-email"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const payload = $json.body?.payload ?? {};\nconst weather = payload.weather ?? {};\nconst lines = [\n  `Weather update for ${payload.city_label ?? 'Unknown location'}`,\n  `Temperature: ${weather.temperature_2m ?? 'n/a'} C`,\n  `Humidity: ${weather.relative_humidity_2m ?? 'n/a'} %`,\n  `Wind Speed: ${weather.wind_speed_10m ?? 'n/a'} km/h`,\n  `Weather Code: ${weather.weather_code ?? 'n/a'}`,\n  `Observed At: ${weather.observed_at ?? 'n/a'}`\n];\nreturn [{\n  json: {\n    recipient_email: payload.recipient_email,\n    subject: payload.subject ?? 'Current weather update',\n    text: lines.join('\\n'),\n    original_payload: payload\n  }\n}];"
+        },
+        "id": "Code_Format_Email",
+        "name": "Format Weather Email",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          520,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "subject": "={{ $json.subject }}",
+          "emailType": "text",
+          "message": "={{ $json.text }}",
+          "toEmail": "={{ $json.recipient_email }}",
+          "options": {}
+        },
+        "id": "Email_Send",
+        "name": "Send Weather Email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          800,
+          300
+        ],
+        "credentials": {
+          "smtp": {
+            "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+            "name": "SMTP account"
+          }
+        },
+        "disabled": true,
+        "notes": "Enable this node after adding SMTP credentials in n8n."
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"recipient_email\": $json.recipient_email,\n  \"subject\": $json.subject,\n  \"message_preview\": $json.text,\n  \"email_node_enabled\": false\n}",
+          "options": {}
+        },
+        "id": "Respond_Success",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [
+          1080,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Weather Email Webhook": {
+        "main": [
+          [
+            {
+              "node": "Format Weather Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Weather Email": {
+        "main": [
+          [
+            {
+              "node": "Send Weather Email",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Weather Email": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {},
+    "pinData": {},
+    "versionId": "cb37872b-45fd-4b42-b738-81f58d4d3906",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    },
+    "id": "PocketComputerWeatherEmail",
+    "tags": []
+  }
+]

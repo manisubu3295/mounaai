@@ -1,0 +1,14 @@
+{
+  "name": "n8n-local",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "n8n start",
+    "start": "n8n start",
+    "import:weather": "n8n import:workflow --input=./workflows/pocketcomputer-weather-email.json"
+  },
+  "dependencies": {
+    "n8n": "^1.91.3",
+    "sqlite3": "^6.0.1"
+  }
+}
