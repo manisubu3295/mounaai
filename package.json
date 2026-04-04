@@ -13,6 +13,9 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma", "esbuild"]
+  },
   "devDependencies": {
     "concurrently": "^9.1.0"
   }

@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
@@ -18,17 +19,29 @@ RUN pnpm --filter api build
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN apk add --no-cache curl
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+RUN apk add --no-cache curl openssl
 WORKDIR /app
 
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/package.json .
-COPY --from=build /app/apps/api/prisma ./prisma
-COPY --from=build /app/node_modules ./node_modules
+# Copy workspace manifests + lockfile so pnpm can do a frozen prod-only install.
+# This guarantees exactly prisma@5.22.0 is used — no npx download at runtime.
+COPY --from=build /app/package.json ./
+COPY --from=build /app/pnpm-lock.yaml ./
+COPY --from=build /app/pnpm-workspace.yaml ./
+COPY --from=build /app/apps/api/package.json ./apps/api/
+COPY --from=build /app/packages/shared-types/package.json ./packages/shared-types/
+COPY --from=build /app/packages/shared-types/dist ./packages/shared-types/dist/
 
-RUN pnpm install --prod --ignore-scripts 2>/dev/null || true
+RUN pnpm install --prod --frozen-lockfile
+
+# Copy built application and Prisma schema
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Switch into the api workspace so pnpm-linked binaries and relative paths work
+WORKDIR /app/apps/api
+
+# Use the local prisma binary directly — never npx (which downloads latest)
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/server.js"]
