@@ -34,9 +34,13 @@ COPY --from=build /app/packages/shared-types/dist ./packages/shared-types/dist/
 
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy built application and Prisma schema
-COPY --from=build /app/apps/api/dist ./apps/api/dist
+# Copy schema before generate so the runner's node_modules gets a generated client
+# (build-stage generate targets build-stage node_modules, not the runner's fresh install)
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
+RUN apps/api/node_modules/.bin/prisma generate --schema=apps/api/prisma/schema.prisma
+
+# Copy compiled application
+COPY --from=build /app/apps/api/dist ./apps/api/dist
 
 EXPOSE 4000
 
