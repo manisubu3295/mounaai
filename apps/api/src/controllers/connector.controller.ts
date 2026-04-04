@@ -179,7 +179,14 @@ connectorRouter.post('/file', async (req: Request, res: Response, next: NextFunc
     if (!name || !file_name || !csv_text) {
       return void res.status(400).json({ success: false, error: 'name, file_name, and csv_text are required' });
     }
-    const fc = await fileConnectorService.createFileConnector(req.user!.tenant_id, { name, description, file_name, csv_text });
+    const input: { name: string; description?: string; file_name: string; csv_text: string } = {
+      name,
+      file_name,
+      csv_text,
+    };
+    if (description !== undefined) input.description = description;
+
+    const fc = await fileConnectorService.createFileConnector(req.user!.tenant_id, input);
     res.status(201).json({ success: true, data: { connector: fc } });
   } catch (err) { next(err); }
 });

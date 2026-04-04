@@ -11,6 +11,7 @@
  */
 
 import { prisma } from '../lib/prisma.js';
+import type { Prisma } from '@prisma/client';
 import { ApiConnector } from '../connectors/api-connector.js';
 import { DbConnector } from '../connectors/db-connector.js';
 import { applyMasking } from './masking.service.js';
@@ -18,6 +19,9 @@ import { LLMProviderFactory } from '../llm/provider-factory.js';
 import { AppError } from '../types/errors.js';
 import { logger } from '../lib/logger.js';
 import type { SimulationResult, SimulationWeek } from '@pocketcomputer/shared-types';
+
+type ApiConnectorSnapshot = Prisma.ApiConnectorGetPayload<{ include: { endpoints: true } }>;
+type DbConnectorSnapshot = Prisma.DbConnectorGetPayload<{ include: { query_templates: true } }>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,8 +82,8 @@ async function fetchConnectorSnapshot(
   const data: Record<string, unknown> = {};
   const errors: string[] = [];
 
-  const apiTasks = apiConnectors.flatMap(connector =>
-    connector.endpoints.map(async endpoint => {
+  const apiTasks = apiConnectors.flatMap((connector: ApiConnectorSnapshot) =>
+    connector.endpoints.map(async (endpoint: ApiConnectorSnapshot['endpoints'][number]) => {
       const key = `${connector.name}.${endpoint.name}`;
       try {
         const ac = new ApiConnector({
@@ -111,8 +115,8 @@ async function fetchConnectorSnapshot(
     })
   );
 
-  const dbTasks = dbConnectors.flatMap(connector =>
-    connector.query_templates.map(async template => {
+  const dbTasks = dbConnectors.flatMap((connector: DbConnectorSnapshot) =>
+    connector.query_templates.map(async (template: DbConnectorSnapshot['query_templates'][number]) => {
       const key = `${connector.name}.${template.name}`;
       try {
         const dc = new DbConnector({

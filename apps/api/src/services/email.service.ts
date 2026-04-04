@@ -85,9 +85,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     return {
       ok: false,
       provider: 'resend',
-      statusCode,
       error: message,
-      providerResponse,
+      ...(statusCode !== undefined ? { statusCode } : {}),
+      ...(providerResponse !== undefined ? { providerResponse } : {}),
     };
   }
 }

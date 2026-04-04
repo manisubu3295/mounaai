@@ -28,8 +28,8 @@ services:
   # ─── API (Backend) ────────────────────────────────────────────────────────────
   api:
     build:
-      context: ../apps/api
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     depends_on:
       db:
@@ -62,8 +62,8 @@ services:
   # ─── Web (Frontend + internal /api proxy) ────────────────────────────────────
   web:
     build:
-      context: ../apps/web
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     depends_on:
       api:

@@ -106,7 +106,7 @@ export interface UpdateRuleInput {
   is_active?: boolean | undefined;
   priority?: number | undefined;
   condition?: ConditionNode | undefined;
-  action_type?: 'CREATE_DECISION' | 'TRIGGER_WORKFLOW' | 'SEND_ALERT' | 'SET_MEMORY' | undefined;
+  action_type?: 'CREATE_DECISION' | 'SET_MEMORY' | undefined;
   action_config?: Record<string, unknown> | undefined;
 }
 

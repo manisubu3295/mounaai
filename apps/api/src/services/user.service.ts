@@ -66,7 +66,7 @@ export async function inviteUser(
   });
 
   await sendEmail({
-    to: email,
+    to: [email],
     subject: `You've been invited to ${tenantName} on PocketComputer`,
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
