@@ -87,11 +87,11 @@ function defaultActionConfig(type: RuleActionType): Record<string, string> {
   }
 }
 
-function configToRecord(type: RuleActionType, cfg: Record<string, string>): Record<string, unknown> {
+function configToRecord(_type: RuleActionType, cfg: Record<string, string>): Record<string, unknown> {
   return cfg;
 }
 
-function recordToConfig(type: RuleActionType, cfg: Record<string, unknown>): Record<string, string> {
+function recordToConfig(_type: RuleActionType, cfg: Record<string, unknown>): Record<string, string> {
   return Object.fromEntries(Object.entries(cfg).map(([k, v]) => [k, String(v ?? '')]));
 }
 

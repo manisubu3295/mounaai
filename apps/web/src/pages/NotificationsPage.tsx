@@ -77,7 +77,7 @@ export function NotificationsPage() {
             </div>
             {unreadCount > 0 && (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => markAllMutation.mutate()}
                 disabled={markAllMutation.isPending}

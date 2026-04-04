@@ -736,6 +736,8 @@ export function ConnectorsPage() {
           )}
         </div>
 
+        <FileConnectorSection />
+
         {/* Masking Rules */}
         <Separator className="mb-6" />
         <MaskingSection />
