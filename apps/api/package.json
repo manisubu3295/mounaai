@@ -25,8 +25,9 @@
   },
   "dependencies": {
     "@pocketcomputer/shared-types": "workspace:*",
-    "@prisma/client": "^5.14.0",
+    "@prisma/client": "5.22.0",
     "axios": "^1.7.2",
+    "prisma": "5.22.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.8.0",
     "compression": "^1.7.4",
@@ -58,7 +59,6 @@
     "@types/supertest": "^7.2.0",
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^2.1.9",
-    "prisma": "^5.14.0",
     "supertest": "^7.2.2",
     "tsx": "^4.16.2",
     "typescript": "^5.4.5",
