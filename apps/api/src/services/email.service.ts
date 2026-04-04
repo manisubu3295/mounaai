@@ -190,6 +190,65 @@ export function analysisFailedEmailHtml(errorMsg: string, appUrl: string): strin
   );
 }
 
+export interface DailyBriefingInsight {
+  title: string;
+  summary: string;
+  type: string;
+  severity: string;
+}
+
+export function dailyBriefingEmailHtml(
+  tenantName: string,
+  insightsCount: number,
+  decisionsCount: number,
+  topInsights: DailyBriefingInsight[],
+  runId: string,
+  appUrl: string
+): string {
+  const severityColor = (s: string) =>
+    s === 'CRITICAL' ? '#dc2626' : s === 'WARNING' ? '#d97706' : '#6366f1';
+
+  const insightRows = topInsights.slice(0, 5).map(i => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f0f0f0">
+        <div style="font-weight:600;color:#111;font-size:14px">${i.title}</div>
+        <div style="color:#555;font-size:13px;margin-top:4px">${i.summary}</div>
+        <div style="margin-top:4px">
+          <span style="background:${severityColor(i.severity)}22;color:${severityColor(i.severity)};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${i.severity}</span>
+          <span style="background:#f3f4f6;color:#555;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:4px">${i.type}</span>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  const insightTable = topInsights.length > 0
+    ? `<table width="100%" cellpadding="0" cellspacing="0">${insightRows}</table>`
+    : `<p style="color:#888;font-style:italic">No new insights this cycle.</p>`;
+
+  const now = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  return baseTemplate(
+    `Daily Briefing — ${now}`,
+    `<p>Good morning! Here is your daily AI analysis briefing for <strong>${tenantName}</strong>.</p>
+     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+       <tr>
+         <td width="50%" style="text-align:center;padding:16px;background:#f9fafb;border-radius:6px">
+           <div style="font-size:32px;font-weight:700;color:#6366f1">${insightsCount}</div>
+           <div style="font-size:13px;color:#555">Insight${insightsCount !== 1 ? 's' : ''} Found</div>
+         </td>
+         <td width="4px"></td>
+         <td width="50%" style="text-align:center;padding:16px;background:#f9fafb;border-radius:6px">
+           <div style="font-size:32px;font-weight:700;color:#6366f1">${decisionsCount}</div>
+           <div style="font-size:13px;color:#555">Decision${decisionsCount !== 1 ? 's' : ''} Created</div>
+         </td>
+       </tr>
+     </table>
+     ${insightsCount > 0 ? '<h3 style="margin:0 0 12px;font-size:15px;color:#111">Top Insights</h3>' : ''}
+     ${insightTable}`,
+    `${appUrl}/insights`,
+    'View Full Report'
+  );
+}
+
 export function connectorErrorEmailHtml(errors: string[], appUrl: string): string {
   const errorList = errors.map(e => `<li>${e}</li>`).join('');
   return baseTemplate(

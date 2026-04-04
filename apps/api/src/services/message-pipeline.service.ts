@@ -59,7 +59,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<ChatMessage
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let totalLatencyMs = 0;
-  let lastModel = llmConfig?.model ?? 'gemini-1.5-pro';
+  let lastModel = llmConfig?.model ?? 'gemini-2.0-flash';
   let finalContent = '';
   let agentTurns = 0;
 
@@ -67,7 +67,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<ChatMessage
     const response = await provider.completeWithTools({
       messages: agentMessages,
       tools,
-      model: llmConfig?.model ?? 'gemini-1.5-pro',
+      model: llmConfig?.model ?? 'gemini-2.0-flash',
       temperature: llmConfig?.temperature ?? 0.3,
       max_tokens: llmConfig?.max_tokens ?? 2048,
     });
@@ -202,7 +202,7 @@ export async function executePipelineStream(
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalLatencyMs = 0;
-    let lastModel = llmConfig?.model ?? 'gemini-1.5-pro';
+    let lastModel = llmConfig?.model ?? 'gemini-2.0-flash';
     let agentTurns = 0;
     // After tool calls complete, collect final non-streaming content here
     // Only stream the very last text response
@@ -212,7 +212,7 @@ export async function executePipelineStream(
       const response = await provider.completeWithTools({
         messages: toolPhaseMessages,
         tools,
-        model: llmConfig?.model ?? 'gemini-1.5-pro',
+        model: llmConfig?.model ?? 'gemini-2.0-flash',
         temperature: llmConfig?.temperature ?? 0.3,
         max_tokens: llmConfig?.max_tokens ?? 2048,
       });
@@ -233,7 +233,7 @@ export async function executePipelineStream(
         await provider.streamCompletion(
           {
             messages: streamMessages,
-            model: llmConfig?.model ?? 'gemini-1.5-pro',
+            model: llmConfig?.model ?? 'gemini-2.0-flash',
             temperature: llmConfig?.temperature ?? 0.3,
             max_tokens: llmConfig?.max_tokens ?? 2048,
           },

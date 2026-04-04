@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Zap, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,9 +38,11 @@ export function LoginPage() {
       {/* Left panel — branding */}
       <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-[hsl(var(--surface))] border-r border-[hsl(var(--border))] p-10 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-[hsl(var(--accent)/0.14)] border border-[hsl(var(--accent)/0.28)] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-[hsl(var(--accent-hover))]" />
-          </div>
+          <img
+            src="/favicon.svg"
+            alt="Mouna AI logo"
+            className="w-7 h-7 object-contain shrink-0"
+          />
           <span className="text-[14px] font-semibold tracking-tight">Mouna AI</span>
         </div>
 
@@ -64,9 +66,11 @@ export function LoginPage() {
 
           {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-8 lg:hidden justify-center">
-            <div className="w-7 h-7 rounded-md bg-[hsl(var(--accent)/0.14)] border border-[hsl(var(--accent)/0.28)] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-[hsl(var(--accent-hover))]" />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="Mouna AI logo"
+              className="w-7 h-7 object-contain shrink-0"
+            />
             <span className="text-[14px] font-semibold tracking-tight">Mouna AI</span>
           </div>
 

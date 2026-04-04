@@ -10,6 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "bootstrap:demo": "tsx scripts/bootstrap-demo-tenant.ts",
     "configure:sales-api": "tsx scripts/configure-sales-api.ts",
     "configure:sales-warehouse": "tsx scripts/configure-sales-warehouse.ts",
     "configure:business-rules": "tsx scripts/configure-business-rules.ts",

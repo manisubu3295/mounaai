@@ -6,7 +6,7 @@ import { redis } from './lib/redis.js';
 import { logger } from './lib/logger.js';
 import { startAnalysisWorker, stopAnalysisWorker } from './jobs/analysis-run.worker.js';
 import { startDecisionExecutorWorker, stopDecisionExecutorWorker } from './jobs/decision-executor.worker.js';
-import { bootstrapScheduler } from './jobs/scheduler.js';
+import { bootstrapScheduler, bootstrapDailyReports } from './jobs/scheduler.js';
 import { enqueueAnalysisRun } from './jobs/analysis-run.queue.js';
 
 /** Re-enqueue any runs left in QUEUED state from a previous crash / restart. */
@@ -51,6 +51,9 @@ async function bootstrap() {
 
     // Register per-tenant scheduled analysis jobs for tenants with auto-analysis enabled
     await bootstrapScheduler();
+
+    // Register daily briefing cron jobs for tenants with daily report enabled
+    await bootstrapDailyReports();
 
     app.listen(env.PORT, () => {
       logger.info(`🚀 PocketComputer API running on port ${env.PORT}`, {

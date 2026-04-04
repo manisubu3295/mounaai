@@ -12,14 +12,14 @@ import {
 import type { NotificationType } from '@pocketcomputer/shared-types';
 
 const TYPE_LABELS: Record<NotificationType, { label: string; color: string }> = {
-  INSIGHT_CRITICAL:            { label: 'Critical',      color: 'bg-red-500/10 text-red-600 border-red-200' },
-  INSIGHT_WARNING:             { label: 'Warning',       color: 'bg-yellow-500/10 text-yellow-700 border-yellow-200' },
-  DECISION_APPROVAL_REQUIRED:  { label: 'Approval',      color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
-  RULE_TRIGGERED:              { label: 'Rule',          color: 'bg-orange-500/10 text-orange-700 border-orange-200' },
-  CONNECTOR_ERROR:             { label: 'Connector',     color: 'bg-red-500/10 text-red-600 border-red-200' },
-  ANALYSIS_COMPLETED:          { label: 'Analysis',      color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
-  ANALYSIS_FAILED:             { label: 'Failed',        color: 'bg-red-500/10 text-red-600 border-red-200' },
-  SYSTEM:                      { label: 'System',        color: 'bg-gray-500/10 text-gray-600 border-gray-200' },
+  INSIGHT_CRITICAL:            { label: 'Urgent Alert',       color: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  INSIGHT_WARNING:             { label: 'Watch Out',          color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
+  DECISION_APPROVAL_REQUIRED:  { label: 'Needs Your Answer',  color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  RULE_TRIGGERED:              { label: 'Auto-action Ran',    color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+  CONNECTOR_ERROR:             { label: 'Data Problem',       color: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  ANALYSIS_COMPLETED:          { label: 'AI Check Done',      color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  ANALYSIS_FAILED:             { label: 'AI Check Failed',    color: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  SYSTEM:                      { label: 'System',             color: 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-secondary))] border-[hsl(var(--border))]' },
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -66,14 +66,14 @@ export function NotificationsPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
-                Notifications
+                Alerts &amp; Updates
                 {unreadCount > 0 && (
                   <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
                     {unreadCount}
                   </span>
                 )}
               </CardTitle>
-              <CardDescription>Alerts, insights and decisions that need your attention.</CardDescription>
+              <CardDescription>Updates from your AI. Tap any item to mark it as read.</CardDescription>
             </div>
             {unreadCount > 0 && (
               <Button
@@ -95,7 +95,7 @@ export function NotificationsPage() {
             )}
             {!isLoading && !data?.items.length && (
               <p className="text-sm text-[hsl(var(--text-secondary))] py-8 text-center">
-                No notifications yet. They will appear here when the AI detects something that needs your attention.
+                You're all caught up! Alerts will show here when the AI spots something important.
               </p>
             )}
 

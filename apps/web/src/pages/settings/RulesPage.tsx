@@ -64,10 +64,8 @@ const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
 ];
 
 const ACTION_OPTIONS: { value: RuleActionType; label: string }[] = [
-  { value: 'CREATE_DECISION',  label: 'Create Decision' },
-  { value: 'TRIGGER_WORKFLOW', label: 'Trigger Workflow' },
-  { value: 'SEND_ALERT',       label: 'Send Alert' },
-  { value: 'SET_MEMORY',       label: 'Set Memory' },
+  { value: 'CREATE_DECISION', label: 'Create Decision' },
+  { value: 'SET_MEMORY',      label: 'Set Memory' },
 ];
 
 const VALUE_HIDDEN = new Set<ConditionOperator>(['is_null', 'is_not_null']);
@@ -85,43 +83,15 @@ function defaultCondition(): ConditionNode {
 function defaultActionConfig(type: RuleActionType): Record<string, string> {
   switch (type) {
     case 'CREATE_DECISION':  return { title: '', recommendation: '', priority: 'MEDIUM' };
-    case 'TRIGGER_WORKFLOW': return { workflow_key: '', payload: '' };
-    case 'SEND_ALERT':       return { title: '', message: '', recipients: '' };
     case 'SET_MEMORY':       return { key: '', value: '', category: 'BUSINESS_RULE' };
   }
 }
 
 function configToRecord(type: RuleActionType, cfg: Record<string, string>): Record<string, unknown> {
-  if (type === 'SEND_ALERT') {
-    return {
-      title: cfg.title,
-      message: cfg.message,
-      recipients: cfg.recipients ? cfg.recipients.split(',').map((s) => s.trim()).filter(Boolean) : [],
-    };
-  }
-  if (type === 'TRIGGER_WORKFLOW') {
-    let payload: unknown;
-    try { if (cfg.payload?.trim()) payload = JSON.parse(cfg.payload); } catch { payload = undefined; }
-    return { workflow_key: cfg.workflow_key, ...(payload !== undefined ? { payload } : {}) };
-  }
   return cfg;
 }
 
 function recordToConfig(type: RuleActionType, cfg: Record<string, unknown>): Record<string, string> {
-  if (type === 'SEND_ALERT') {
-    const r = Array.isArray(cfg.recipients) ? (cfg.recipients as string[]).join(', ') : '';
-    return {
-      title:      String(cfg.title ?? ''),
-      message:    String(cfg.message ?? ''),
-      recipients: r,
-    };
-  }
-  if (type === 'TRIGGER_WORKFLOW') {
-    return {
-      workflow_key: String(cfg.workflow_key ?? ''),
-      payload:      cfg.payload !== undefined ? JSON.stringify(cfg.payload, null, 2) : '',
-    };
-  }
   return Object.fromEntries(Object.entries(cfg).map(([k, v]) => [k, String(v ?? '')]));
 }
 
@@ -336,71 +306,6 @@ function ActionConfigEditor({
             ]}
             className="mt-1 w-40"
           />
-        </div>
-      </div>
-    );
-  }
-
-  if (actionType === 'TRIGGER_WORKFLOW') {
-    return (
-      <div className="space-y-3">
-        <div>
-          <Label>Workflow Key</Label>
-          <Input
-            value={config.workflow_key ?? ''}
-            onChange={(e) => set('workflow_key', e.target.value)}
-            placeholder="e.g. REMINDER_SCHEDULED"
-            className="mt-1 font-mono"
-          />
-          <p className="text-xs text-[hsl(var(--text-disabled))] mt-1">
-            Must match a workflow key configured in Settings → Automation.
-          </p>
-        </div>
-        <div>
-          <Label>Extra Payload (JSON, optional)</Label>
-          <Textarea
-            value={config.payload ?? ''}
-            onChange={(e) => set('payload', e.target.value)}
-            placeholder={'{\n  "key": "value"\n}'}
-            rows={3}
-            className="mt-1 font-mono text-xs"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (actionType === 'SEND_ALERT') {
-    return (
-      <div className="space-y-3">
-        <div>
-          <Label>Alert Title</Label>
-          <Input
-            value={config.title ?? ''}
-            onChange={(e) => set('title', e.target.value)}
-            placeholder="e.g. Low stock warning"
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Message</Label>
-          <Textarea
-            value={config.message ?? ''}
-            onChange={(e) => set('message', e.target.value)}
-            placeholder="Alert message body..."
-            rows={2}
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Recipients</Label>
-          <Input
-            value={config.recipients ?? ''}
-            onChange={(e) => set('recipients', e.target.value)}
-            placeholder="admin@company.com, ops@company.com"
-            className="mt-1"
-          />
-          <p className="text-xs text-[hsl(var(--text-disabled))] mt-1">Comma-separated email addresses.</p>
         </div>
       </div>
     );
@@ -678,15 +583,11 @@ function RuleEditor({
 
 const ACTION_BADGE: Record<RuleActionType, string> = {
   CREATE_DECISION:  'bg-blue-100 text-blue-700',
-  TRIGGER_WORKFLOW: 'bg-purple-100 text-purple-700',
-  SEND_ALERT:       'bg-amber-100 text-amber-700',
   SET_MEMORY:       'bg-emerald-100 text-emerald-700',
 };
 
 const ACTION_LABEL: Record<RuleActionType, string> = {
   CREATE_DECISION:  'Decision',
-  TRIGGER_WORKFLOW: 'Workflow',
-  SEND_ALERT:       'Alert',
   SET_MEMORY:       'Memory',
 };
 

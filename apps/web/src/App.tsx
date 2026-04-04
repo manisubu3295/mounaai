@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useThemeStore } from '@/stores/theme.store';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth.store';
@@ -14,11 +15,12 @@ import { DecisionCenterPage } from '@/pages/decisions/DecisionCenterPage';
 import { LLMConfigPage } from '@/pages/settings/LLMConfigPage';
 import { ConnectorsPage } from '@/pages/settings/ConnectorsPage';
 import { AuditPage } from '@/pages/settings/AuditPage';
-import { N8nIntegrationPage } from '@/pages/settings/N8nIntegrationPage';
 import { RulesPage } from '@/pages/settings/RulesPage';
 import { KPIsPage } from '@/pages/settings/KPIsPage';
 import { CommunicationPage } from '@/pages/settings/CommunicationPage';
+import { DailyBriefingPage } from '@/pages/settings/DailyBriefingPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
+import { SimulatePage } from '@/pages/SimulatePage';
 import { AnalysisRunDetailPage } from '@/pages/analysis/AnalysisRunDetailPage';
 import { Layout } from '@/components/shared/Layout';
 
@@ -54,6 +56,11 @@ function PublicOnly() {
 
 export default function App() {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     let isActive = true;
@@ -102,13 +109,14 @@ export default function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:id" element={<ChatPage />} />
               <Route path="/settings/llm" element={<LLMConfigPage />} />
-              <Route path="/settings/automation" element={<N8nIntegrationPage />} />
               <Route path="/settings/connectors" element={<ConnectorsPage />} />
               <Route path="/settings/rules" element={<RulesPage />} />
               <Route path="/settings/kpis" element={<KPIsPage />} />
               <Route path="/settings/communication" element={<CommunicationPage />} />
+              <Route path="/settings/daily-briefing" element={<DailyBriefingPage />} />
               <Route path="/settings/audit" element={<AuditPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/simulate" element={<SimulatePage />} />
               <Route path="/analysis-runs/:id" element={<AnalysisRunDetailPage />} />
             </Route>
           </Route>

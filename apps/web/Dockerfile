@@ -17,6 +17,7 @@ RUN pnpm --filter web build
 
 # ─── Serve with Nginx ─────────────────────────────────────────────────────────
 FROM nginx:alpine AS runner
+RUN apk add --no-cache curl
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

@@ -1,6 +1,5 @@
 import { prisma } from '../lib/prisma.js';
-import type { AnalysisRun, AnalysisRunDetail, PaginatedResponse } from '@pocketcomputer/shared-types';
-import { triggerAnalysisRunRequestedAutomation } from './automation.service.js';
+import type { AnalysisRun, AnalysisRunDetail, PaginatedResponse, PeriodSummary } from '@pocketcomputer/shared-types';
 import { enqueueAnalysisRun } from '../jobs/analysis-run.queue.js';
 import { logger } from '../lib/logger.js';
 import { NotFoundError } from '../types/errors.js';
@@ -71,14 +70,6 @@ export async function createAnalysisRun(
     });
   });
 
-  // Notify any configured n8n automation
-  void triggerAnalysisRunRequestedAutomation(tenantId, {
-    analysis_run_id: created.id,
-    status: created.status,
-    initiated_by_user_id: userId,
-    summary: (summary ?? {}) as Record<string, unknown>,
-  });
-
   return formatAnalysisRun(created);
 }
 
@@ -126,8 +117,106 @@ export async function getAnalysisRunDetail(tenantId: string, runId: string): Pro
       approved_at: d.approved_at?.toISOString() ?? null,
       explanation: d.explanation,
       triggered_source: d.triggered_source,
+      feedback_notes: d.feedback_notes,
       created_at: d.created_at.toISOString(),
       updated_at: d.updated_at.toISOString(),
     })),
   };
+}
+
+export async function clearAnalysisData(tenantId: string): Promise<{ deleted_runs: number }> {
+  // Cascade deletes generated_insights and decision_points via FK onDelete
+  const result = await prisma.analysisRun.deleteMany({ where: { tenant_id: tenantId } });
+  logger.info('Analysis data cleared', { tenantId, deleted_runs: result.count });
+  return { deleted_runs: result.count };
+}
+
+// ─── Periodic summary helpers ─────────────────────────────────────────────────
+
+type RawPeriodRow = {
+  period: string;
+  run_count: bigint;
+  insight_count: bigint;
+  critical_count: bigint;
+  warning_count: bigint;
+  info_count: bigint;
+  decision_count: bigint;
+  approved_count: bigint;
+  rejected_count: bigint;
+};
+
+function periodLabel(period: string, mode: 'monthly' | 'quarterly'): string {
+  if (mode === 'quarterly') return period.replace(/-Q/, ' Q'); // "2025-Q1" → "2025 Q1" → reformat below
+  // monthly: "2025-03"
+  const [y, m] = period.split('-');
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-IN', {
+    month: 'long', year: 'numeric',
+  });
+}
+
+function formatPeriodRow(row: RawPeriodRow, mode: 'monthly' | 'quarterly'): PeriodSummary {
+  const period = String(row.period);
+  return {
+    period,
+    period_label: mode === 'quarterly'
+      ? (() => { const [y, q] = period.split('-Q'); return `Q${q} ${y}`; })()
+      : periodLabel(period, mode),
+    run_count:      Number(row.run_count),
+    insight_count:  Number(row.insight_count),
+    critical_count: Number(row.critical_count),
+    warning_count:  Number(row.warning_count),
+    info_count:     Number(row.info_count),
+    decision_count: Number(row.decision_count),
+    approved_count: Number(row.approved_count),
+    rejected_count: Number(row.rejected_count),
+  };
+}
+
+export async function getPeriodicSummary(
+  tenantId: string,
+  period: 'monthly' | 'quarterly'
+): Promise<PeriodSummary[]> {
+  if (period === 'monthly') {
+    const rows = await prisma.$queryRaw<RawPeriodRow[]>`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', ar.created_at), 'YYYY-MM')  AS period,
+        COUNT(DISTINCT ar.id)::bigint                            AS run_count,
+        COUNT(DISTINCT gi.id)::bigint                           AS insight_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'CRITICAL' THEN gi.id END)::bigint AS critical_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'WARNING'  THEN gi.id END)::bigint AS warning_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'INFO'     THEN gi.id END)::bigint AS info_count,
+        COUNT(DISTINCT dp.id)::bigint                           AS decision_count,
+        COUNT(DISTINCT CASE WHEN dp.status = 'APPROVED'  THEN dp.id END)::bigint AS approved_count,
+        COUNT(DISTINCT CASE WHEN dp.status = 'REJECTED'  THEN dp.id END)::bigint AS rejected_count
+      FROM analysis_runs ar
+      LEFT JOIN generated_insights gi ON gi.analysis_run_id = ar.id AND gi.tenant_id = ar.tenant_id
+      LEFT JOIN decision_points dp ON dp.insight_id = gi.id AND dp.tenant_id = ar.tenant_id
+      WHERE ar.tenant_id = ${tenantId} AND ar.status = 'COMPLETED'
+      GROUP BY DATE_TRUNC('month', ar.created_at)
+      ORDER BY DATE_TRUNC('month', ar.created_at) DESC
+      LIMIT 12
+    `;
+    return rows.map(r => formatPeriodRow(r, 'monthly'));
+  } else {
+    const rows = await prisma.$queryRaw<RawPeriodRow[]>`
+      SELECT
+        TO_CHAR(DATE_TRUNC('quarter', ar.created_at), 'YYYY-"Q"Q') AS period,
+        COUNT(DISTINCT ar.id)::bigint                                AS run_count,
+        COUNT(DISTINCT gi.id)::bigint                               AS insight_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'CRITICAL' THEN gi.id END)::bigint AS critical_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'WARNING'  THEN gi.id END)::bigint AS warning_count,
+        COUNT(DISTINCT CASE WHEN gi.severity = 'INFO'     THEN gi.id END)::bigint AS info_count,
+        COUNT(DISTINCT dp.id)::bigint                               AS decision_count,
+        COUNT(DISTINCT CASE WHEN dp.status = 'APPROVED'  THEN dp.id END)::bigint AS approved_count,
+        COUNT(DISTINCT CASE WHEN dp.status = 'REJECTED'  THEN dp.id END)::bigint AS rejected_count
+      FROM analysis_runs ar
+      LEFT JOIN generated_insights gi ON gi.analysis_run_id = ar.id AND gi.tenant_id = ar.tenant_id
+      LEFT JOIN decision_points dp ON dp.insight_id = gi.id AND dp.tenant_id = ar.tenant_id
+      WHERE ar.tenant_id = ${tenantId} AND ar.status = 'COMPLETED'
+      GROUP BY DATE_TRUNC('quarter', ar.created_at)
+      ORDER BY DATE_TRUNC('quarter', ar.created_at) DESC
+      LIMIT 8
+    `;
+    return rows.map(r => formatPeriodRow(r, 'quarterly'));
+  }
 }

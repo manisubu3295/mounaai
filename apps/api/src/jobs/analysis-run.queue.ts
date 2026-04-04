@@ -6,7 +6,7 @@ import { logger } from '../lib/logger.js';
 export interface AnalysisRunJobData {
   tenantId: string;
   runId: string;
-  triggeredBy?: 'USER' | 'SCHEDULER';
+  triggeredBy?: 'USER' | 'SCHEDULER' | 'DAILY_REPORT';
 }
 
 // BullMQ requires maxRetriesPerRequest: null for blocking commands

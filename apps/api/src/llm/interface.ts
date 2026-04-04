@@ -10,6 +10,7 @@ export interface LLMCompletionRequest {
   model: string;
   temperature: number;
   max_tokens: number;
+  response_mime_type?: 'application/json' | 'text/plain';
 }
 
 export interface LLMCompletionResponse {

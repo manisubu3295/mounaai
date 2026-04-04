@@ -4,6 +4,8 @@ import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 import { executeAnalysisRun } from '../services/analysis-engine.service.js';
+import { markDailyReportSent } from '../services/daily-report.service.js';
+import { sendEmail, dailyBriefingEmailHtml } from '../services/email.service.js';
 import type { AnalysisRunJobData } from './analysis-run.queue.js';
 
 // Dedicated connection — BullMQ workers need maxRetriesPerRequest: null
@@ -42,6 +44,11 @@ export function startAnalysisWorker(): void {
 
       logger.info('Processing analysis run job', { jobId: job.id, tenantId, runId, triggeredBy });
       await executeAnalysisRun(tenantId, runId);
+
+      // Send daily briefing email if this was triggered by the daily report scheduler
+      if (triggeredBy === 'DAILY_REPORT') {
+        await sendDailyBriefingEmail(tenantId, runId);
+      }
     },
     {
       connection,
@@ -68,6 +75,68 @@ export function startAnalysisWorker(): void {
   });
 
   logger.info('Analysis run worker started');
+}
+
+async function sendDailyBriefingEmail(tenantId: string, runId: string): Promise<void> {
+  try {
+    const [dailyReport, run, tenant] = await Promise.all([
+      prisma.dailyReport.findUnique({ where: { tenant_id: tenantId } }),
+      prisma.analysisRun.findUnique({
+        where: { id: runId },
+        include: {
+          insights: { take: 5, orderBy: { created_at: 'desc' } },
+        },
+      }),
+      prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+    ]);
+
+    if (!dailyReport || !dailyReport.is_enabled || dailyReport.email_recipients.length === 0) {
+      logger.info('Daily briefing: no recipients configured, skipping email', { tenantId });
+      return;
+    }
+
+    if (!run || !tenant) {
+      logger.warn('Daily briefing: run or tenant not found', { tenantId, runId });
+      return;
+    }
+
+    const decisionsCount = await prisma.decisionPoint.count({
+      where: {
+        tenant_id: tenantId,
+        insight: { analysis_run_id: runId },
+      },
+    });
+
+    const topInsights = (run.insights ?? []).map(i => ({
+      title: i.title,
+      summary: i.summary,
+      type: i.type,
+      severity: i.severity,
+    }));
+
+    const html = dailyBriefingEmailHtml(
+      tenant.name,
+      run.insights?.length ?? 0,
+      decisionsCount,
+      topInsights,
+      runId,
+      env.APP_BASE_URL!
+    );
+
+    await sendEmail({
+      to: dailyReport.email_recipients,
+      subject: `Mouna AI — Daily Briefing (${new Date().toLocaleDateString('en-IN')})`,
+      html,
+    });
+
+    await markDailyReportSent(tenantId);
+    logger.info('Daily briefing email sent', { tenantId, recipients: dailyReport.email_recipients.length });
+  } catch (err) {
+    logger.error('Daily briefing: failed to send email', {
+      tenantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 export async function stopAnalysisWorker(): Promise<void> {

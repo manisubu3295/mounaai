@@ -36,7 +36,7 @@ const conditionNodeSchema = z.union([ruleConditionLeafSchema, ruleConditionGroup
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
-const actionTypeSchema = z.enum(['CREATE_DECISION', 'TRIGGER_WORKFLOW', 'SEND_ALERT', 'SET_MEMORY']);
+const actionTypeSchema = z.enum(['CREATE_DECISION', 'SET_MEMORY']);
 
 // ─── Rule CRUD schemas ────────────────────────────────────────────────────────
 

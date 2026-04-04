@@ -16,8 +16,6 @@ export type InsightType = 'RISK' | 'OPPORTUNITY' | 'INEFFICIENCY' | 'WATCH';
 export type InsightSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 export type DecisionStatus = 'OPEN' | 'APPROVAL_REQUIRED' | 'APPROVED' | 'REJECTED' | 'TRIGGERED' | 'COMPLETED';
 export type DecisionPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type WorkflowRunStatus = 'REQUESTED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'TIMED_OUT';
-export type AutomationWorkflowKey = 'REMINDER_SCHEDULED' | 'DECISION_APPROVED' | 'DECISION_REJECTED' | 'ANALYSIS_RUN_REQUESTED' | 'WEATHER_EMAIL';
 
 // ─── API Response Envelope ────────────────────────────────────────────────────
 
@@ -280,39 +278,6 @@ export interface DecisionPoint {
   updated_at: string;
 }
 
-export interface N8nIntegrationConfig {
-  id: string;
-  base_url: string;
-  timeout_ms: number;
-  is_enabled: boolean;
-  api_key_hint: string | null;
-  callback_secret_hint: string | null;
-}
-
-export interface AutomationWorkflowDefinition {
-  id: string;
-  key: AutomationWorkflowKey;
-  name: string;
-  description: string | null;
-  webhook_path: string;
-  workflow_version: string;
-  is_enabled: boolean;
-  trigger_source: 'MANUAL' | 'EVENT';
-  updated_at: string;
-}
-
-export interface WorkflowRun {
-  id: string;
-  workflow_key: AutomationWorkflowKey;
-  workflow_version: string;
-  status: WorkflowRunStatus;
-  trigger_event: string;
-  external_run_id: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  error_message: string | null;
-  created_at: string;
-}
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
@@ -350,6 +315,67 @@ export interface NotificationPreference {
   notify_on_rule_trigger: boolean;
   notify_on_approval_required: boolean;
   notify_on_connector_error: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Simulation ──────────────────────────────────────────────────────────────
+
+export type SimulationImpact = 'positive' | 'negative' | 'neutral' | 'mixed';
+export type SimulationDirection = 'up' | 'down' | 'flat';
+
+export interface SimulationWeek {
+  week: number;
+  dates: string;
+  headline: string;
+  detail: string;
+  direction: SimulationDirection;
+  key_metric: string | null;
+}
+
+export interface SimulationResult {
+  scenario: string;
+  scenario_plain: string;
+  overall_impact: SimulationImpact;
+  confidence: number;
+  summary: string;
+  month_headline: string;
+  weeks: SimulationWeek[];
+  best_case: string;
+  worst_case: string;
+  risks: string[];
+  opportunities: string[];
+  recommendation: string;
+  data_basis: string;
+  has_live_data: boolean;
+  simulated_at: string;
+}
+
+// ─── Periodic Summary ─────────────────────────────────────────────────────────
+
+export interface PeriodSummary {
+  period: string;          // "2025-03" (monthly) or "2025-Q1" (quarterly)
+  period_label: string;    // "March 2025" or "Q1 2025"
+  run_count: number;
+  insight_count: number;
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  decision_count: number;
+  approved_count: number;
+  rejected_count: number;
+}
+
+// ─── Daily Briefing ───────────────────────────────────────────────────────────
+
+export interface DailyReport {
+  id: string;
+  tenant_id: string;
+  is_enabled: boolean;
+  send_time: string;       // HH:MM 24h
+  timezone: string;
+  email_recipients: string[];
+  last_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }

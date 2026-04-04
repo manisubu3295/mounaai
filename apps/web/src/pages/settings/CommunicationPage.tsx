@@ -119,7 +119,7 @@ export function CommunicationPage() {
                 <Input
                   id="communication_email"
                   type="email"
-                  placeholder="mani1@gmail.com"
+                  placeholder="you@yourcompany.com"
                   {...register('communication_email')}
                 />
                 <p className="text-xs text-[hsl(var(--text-secondary))]">

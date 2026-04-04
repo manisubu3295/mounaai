@@ -50,12 +50,21 @@ export class GeminiProvider implements ILLMProvider {
     const contents = this.messagesFromSimple(req.messages);
     const url = `${this.baseUrl}/models/${req.model}:generateContent?key=${this.apiKey}`;
 
+    const generationConfig: Record<string, unknown> = {
+      temperature: req.temperature,
+      maxOutputTokens: req.max_tokens,
+    };
+
+    if (req.response_mime_type) {
+      generationConfig.responseMimeType = req.response_mime_type;
+    }
+
     try {
       const response = await axios.post(
         url,
         {
           contents,
-          generationConfig: { temperature: req.temperature, maxOutputTokens: req.max_tokens },
+          generationConfig,
         },
         { timeout: this.timeoutMs }
       );
@@ -63,7 +72,11 @@ export class GeminiProvider implements ILLMProvider {
       const candidate = response.data?.candidates?.[0];
       if (!candidate) throw new LLMError('Gemini returned no candidates', 'RESPONSE_MALFORMED');
 
-      const content: string = candidate.content?.parts?.[0]?.text ?? '';
+      const parts: GeminiPart[] = candidate.content?.parts ?? [];
+      const content = parts
+        .filter((part): part is { text: string } => 'text' in part)
+        .map(part => part.text)
+        .join('');
       const usage = response.data.usageMetadata ?? {};
 
       return {

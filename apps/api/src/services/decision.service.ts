@@ -1,7 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../types/errors.js';
 import type { DecisionPoint, PaginatedResponse } from '@pocketcomputer/shared-types';
-import { triggerDecisionStatusAutomation } from './automation.service.js';
 import { enqueueDecisionExecution } from '../jobs/decision-executor.queue.js';
 
 function formatDecision(decision: {
@@ -106,15 +105,6 @@ export async function updateDecisionStatus(
     },
   });
 
-  void triggerDecisionStatusAutomation(tenantId, status, {
-    decision_id: updated.id,
-    insight_id: updated.insight_id,
-    title: updated.title,
-    recommendation: updated.recommendation,
-    priority: updated.priority,
-    approved_by_user_id: userId,
-    approved_at: updated.approved_at?.toISOString() ?? null,
-  });
 
   // Enqueue autonomous execution when manually approved
   if (status === 'APPROVED') {

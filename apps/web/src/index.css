@@ -5,33 +5,35 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* ── Surfaces ─────────────────────────────────────────── */
+  /* ── Dark theme (default) ─────────────────────────────── */
+  :root,
+  [data-theme="dark"] {
+    /* Surfaces */
     --background:      222 24% 6%;
     --surface:         224 21% 10%;
     --surface-2:       224 18% 14%;
     --surface-3:       224 15% 18%;
 
-    /* ── Borders ──────────────────────────────────────────── */
+    /* Borders */
     --border:          222 14% 21%;
     --border-strong:   222 14% 28%;
 
-    /* ── Text ─────────────────────────────────────────────── */
+    /* Text */
     --foreground:      218 28% 94%;
     --text-primary:    218 28% 94%;
     --text-secondary:  220 14% 58%;
     --text-disabled:   220 10% 34%;
 
-    /* ── Accent / Brand ───────────────────────────────────── */
+    /* Accent / Brand */
     --accent:          233 68% 61%;
-    --accent-hover:    233 68% 68%;
+    --accent-hover:    233 68% 70%;
 
-    /* ── Semantic ─────────────────────────────────────────── */
+    /* Semantic */
     --success:         152 58% 43%;
     --warning:          38 80% 54%;
     --error:             0 66% 57%;
 
-    /* ── shadcn compat ────────────────────────────────────── */
+    /* shadcn compat */
     --card:                var(--surface);
     --card-foreground:     var(--text-primary);
     --popover:             var(--surface-2);
@@ -47,7 +49,54 @@
     --input:               222 18% 11%;
     --ring:                var(--accent);
 
-    /* ── Geometry ─────────────────────────────────────────── */
+    /* Geometry */
+    --radius: 0.375rem;
+  }
+
+  /* ── Light theme ──────────────────────────────────────── */
+  [data-theme="light"] {
+    /* Surfaces */
+    --background:      216 22% 96%;
+    --surface:           0  0% 100%;
+    --surface-2:       216 16% 93%;
+    --surface-3:       216 14% 87%;
+
+    /* Borders */
+    --border:          216 12% 85%;
+    --border-strong:   216 12% 74%;
+
+    /* Text */
+    --foreground:      222 22% 11%;
+    --text-primary:    222 22% 11%;
+    --text-secondary:  220 10% 40%;
+    --text-disabled:   220  8% 60%;
+
+    /* Accent / Brand */
+    --accent:          233 68% 58%;
+    --accent-hover:    233 68% 48%;
+
+    /* Semantic */
+    --success:         152 55% 36%;
+    --warning:          38 78% 42%;
+    --error:             0 64% 48%;
+
+    /* shadcn compat */
+    --card:                var(--surface);
+    --card-foreground:     var(--text-primary);
+    --popover:             var(--surface);
+    --popover-foreground:  var(--text-primary);
+    --primary:             var(--accent);
+    --primary-foreground:  0 0% 100%;
+    --secondary:           var(--surface-2);
+    --secondary-foreground: var(--text-primary);
+    --muted:               var(--surface-2);
+    --muted-foreground:    var(--text-secondary);
+    --destructive:         var(--error);
+    --destructive-foreground: 0 0% 100%;
+    --input:               216 16% 97%;
+    --ring:                var(--accent);
+
+    /* Geometry */
     --radius: 0.375rem;
   }
 

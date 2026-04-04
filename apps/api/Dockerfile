@@ -18,6 +18,7 @@ RUN pnpm --filter api build
 # ─── Run ──────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apk add --no-cache curl
 WORKDIR /app
 
 COPY --from=build /app/apps/api/dist ./dist

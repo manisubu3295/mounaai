@@ -9,11 +9,12 @@ import { kpiRouter } from '../controllers/kpi.controller.js';
 import { analysisRouter } from '../controllers/analysis.controller.js';
 import { insightRouter } from '../controllers/insight.controller.js';
 import { decisionRouter } from '../controllers/decision.controller.js';
-import { automationRouter } from '../controllers/automation.controller.js';
 import { autonomyRouter } from '../controllers/autonomy.controller.js';
 import { rulesRouter } from '../controllers/rules.controller.js';
 import { notificationRouter } from '../controllers/notification.controller.js';
 import { userRouter } from '../controllers/user.controller.js';
+import { simulateRouter } from '../controllers/simulate.controller.js';
+import { dailyReportRouter } from '../controllers/daily-report.controller.js';
 
 export const apiRouter: ExpressRouter = Router();
 
@@ -27,8 +28,9 @@ apiRouter.use('/kpis', kpiRouter);
 apiRouter.use('/analysis-runs', analysisRouter);
 apiRouter.use('/insights', insightRouter);
 apiRouter.use('/decisions', decisionRouter);
-apiRouter.use('/automation', automationRouter);
 apiRouter.use('/autonomy', autonomyRouter);
 apiRouter.use('/rules', rulesRouter);
 apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/users', userRouter);
+apiRouter.use('/simulate', simulateRouter);
+apiRouter.use('/daily-report', dailyReportRouter);

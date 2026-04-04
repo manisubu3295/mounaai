@@ -41,7 +41,7 @@ export function LLMConfigPage() {
       provider_id: '',
       api_key: '',
       base_url: '',
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash',
       temperature: 0.7,
       max_tokens: 2048,
       timeout_ms: 30000,
@@ -191,9 +191,13 @@ export function LLMConfigPage() {
                 <Label htmlFor="model">Model</Label>
                 <Input
                   id="model"
-                  placeholder="gemini-1.5-pro"
+                  placeholder="gemini-2.0-flash"
                   {...register('model', { required: true })}
                 />
+                <p className="text-[11.5px] text-[hsl(var(--text-disabled))]">
+                  Free tier: <span className="font-mono text-[hsl(var(--text-secondary))]">gemini-2.0-flash</span> (15 RPM) or <span className="font-mono text-[hsl(var(--text-secondary))]">gemini-1.5-flash</span> (15 RPM).
+                  Avoid <span className="font-mono">gemini-1.5-pro</span> — only 2 RPM on free tier.
+                </p>
               </div>
 
               {/* Temperature + Max Tokens */}

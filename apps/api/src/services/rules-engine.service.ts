@@ -18,7 +18,7 @@
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { enqueueDecisionExecution } from '../jobs/decision-executor.queue.js';
-import { triggerWorkflowByKey } from './automation.service.js';
+
 import { upsertMemory } from './memory.service.js';
 import { notifyRuleTriggered } from './notification.service.js';
 
@@ -81,7 +81,7 @@ export interface BusinessRuleRecord {
   is_active: boolean;
   priority: number;
   condition: ConditionNode;
-  action_type: 'CREATE_DECISION' | 'TRIGGER_WORKFLOW' | 'SEND_ALERT' | 'SET_MEMORY';
+  action_type: 'CREATE_DECISION' | 'SET_MEMORY';
   action_config: Record<string, unknown>;
   last_evaluated_at: string | null;
   last_triggered_at: string | null;
@@ -96,7 +96,7 @@ export interface CreateRuleInput {
   is_active?: boolean | undefined;
   priority?: number | undefined;
   condition: ConditionNode;
-  action_type: 'CREATE_DECISION' | 'TRIGGER_WORKFLOW' | 'SEND_ALERT' | 'SET_MEMORY';
+  action_type: 'CREATE_DECISION' | 'SET_MEMORY';
   action_config: Record<string, unknown>;
 }
 
@@ -115,7 +115,6 @@ export interface EvaluateRulesResult {
   rules_triggered: number;
   insights_created: number;
   decisions_created: number;
-  workflows_triggered: number;
   memories_set: number;
 }
 
@@ -242,10 +241,9 @@ async function executeAction(
   runId: string,
   triggeredField: string,
   connectorData: Record<string, unknown>
-): Promise<{ insightsCreated: number; decisionsCreated: number; workflowsTriggered: number; memoriesSet: number }> {
+): Promise<{ insightsCreated: number; decisionsCreated: number; memoriesSet: number }> {
   let insightsCreated = 0;
   let decisionsCreated = 0;
-  let workflowsTriggered = 0;
   let memoriesSet = 0;
 
   switch (actionType) {
@@ -313,38 +311,6 @@ async function executeAction(
       break;
     }
 
-    case 'TRIGGER_WORKFLOW': {
-      const cfg = actionConfig as Partial<TriggerWorkflowActionConfig>;
-      if (!cfg.workflow_key) break;
-
-      void triggerWorkflowByKey(tenantId, cfg.workflow_key, 'rule.triggered', {
-        rule_id:   ruleId,
-        rule_name: ruleName,
-        ...(cfg.payload ?? {}),
-      });
-      workflowsTriggered++;
-
-      logger.info('Rules engine: workflow triggered', {
-        tenantId, ruleId, workflow_key: cfg.workflow_key,
-      });
-      break;
-    }
-
-    case 'SEND_ALERT': {
-      const cfg = actionConfig as Partial<SendAlertActionConfig>;
-      void triggerWorkflowByKey(tenantId, 'REMINDER_SCHEDULED', 'rule.alert', {
-        title:               cfg.title ?? `Alert: ${ruleName}`,
-        message:             cfg.message ?? `Business rule "${ruleName}" has been triggered.`,
-        recipients:          cfg.recipients ?? [],
-        related_rule_id:     ruleId,
-        requested_by_user_id: null,
-      });
-      workflowsTriggered++;
-
-      logger.info('Rules engine: alert sent', { tenantId, ruleId });
-      break;
-    }
-
     case 'SET_MEMORY': {
       const cfg = actionConfig as Partial<SetMemoryActionConfig>;
       if (!cfg.key || !cfg.value) break;
@@ -363,7 +329,7 @@ async function executeAction(
     }
   }
 
-  return { insightsCreated, decisionsCreated, workflowsTriggered, memoriesSet };
+  return { insightsCreated, decisionsCreated, memoriesSet };
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -496,13 +462,12 @@ export async function evaluateRulesForTenant(
   });
 
   if (!rules.length) {
-    return { rules_evaluated: 0, rules_triggered: 0, insights_created: 0, decisions_created: 0, workflows_triggered: 0, memories_set: 0 };
+    return { rules_evaluated: 0, rules_triggered: 0, insights_created: 0, decisions_created: 0, memories_set: 0 };
   }
 
   let rulesTriggered = 0;
   let insightsCreated = 0;
   let decisionsCreated = 0;
-  let workflowsTriggered = 0;
   let memoriesSet = 0;
   const now = new Date();
 
@@ -549,10 +514,9 @@ export async function evaluateRulesForTenant(
         connectorData
       );
 
-      decisionsCreated  += result.decisionsCreated;
-  insightsCreated   += result.insightsCreated;
-      workflowsTriggered += result.workflowsTriggered;
-      memoriesSet        += result.memoriesSet;
+      insightsCreated  += result.insightsCreated;
+      decisionsCreated += result.decisionsCreated;
+      memoriesSet      += result.memoriesSet;
 
       // Update rule stats and log successful execution
       await prisma.businessRule.update({
@@ -605,12 +569,11 @@ export async function evaluateRulesForTenant(
   });
 
   return {
-    rules_evaluated:    rules.length,
-    rules_triggered:    rulesTriggered,
-    insights_created:   insightsCreated,
-    decisions_created:  decisionsCreated,
-    workflows_triggered: workflowsTriggered,
-    memories_set:       memoriesSet,
+    rules_evaluated:  rules.length,
+    rules_triggered:  rulesTriggered,
+    insights_created: insightsCreated,
+    decisions_created: decisionsCreated,
+    memories_set:     memoriesSet,
   };
 }
 

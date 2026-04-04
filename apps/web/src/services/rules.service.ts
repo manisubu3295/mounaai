@@ -21,7 +21,7 @@ export interface RuleConditionGroup {
 
 export type ConditionNode = RuleConditionLeaf | RuleConditionGroup;
 
-export type RuleActionType = 'CREATE_DECISION' | 'TRIGGER_WORKFLOW' | 'SEND_ALERT' | 'SET_MEMORY';
+export type RuleActionType = 'CREATE_DECISION' | 'SET_MEMORY';
 
 export interface BusinessRule {
   id: string;

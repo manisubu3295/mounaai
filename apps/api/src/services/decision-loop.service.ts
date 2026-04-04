@@ -12,7 +12,6 @@
 
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
-import { triggerDecisionStatusAutomation } from './automation.service.js';
 import { enqueueDecisionExecution } from '../jobs/decision-executor.queue.js';
 import { notifyDecisionApprovalRequired } from './notification.service.js';
 
@@ -232,25 +231,11 @@ export async function executeDecision(tenantId: string, decisionId: string): Pro
 
   logger.info('Decision execution triggered', { tenantId, decisionId, title: decision.title });
 
-  // Fire via n8n (fire-and-forget — callback closes the loop)
-  void triggerDecisionStatusAutomation(tenantId, 'APPROVED', {
-    decision_id:   decision.id,
-    insight_id:    decision.insight_id,
-    title:         decision.title,
-    recommendation: decision.recommendation,
-    priority:      decision.priority,
-    confidence:    decision.confidence,
-    auto_executed: true,
-    triggered_at:  new Date().toISOString(),
-  });
 }
 
 // ─── Decision completion ──────────────────────────────────────────────────────
 
-/**
- * Mark a decision COMPLETED after n8n confirms successful execution.
- * Called from automation.service.handleN8nWorkflowCallback.
- */
+/** Mark a decision COMPLETED after execution. */
 export async function completeDecision(decisionId: string): Promise<void> {
   const decision = await prisma.decisionPoint.findUnique({ where: { id: decisionId } });
 

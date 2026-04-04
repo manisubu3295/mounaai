@@ -147,14 +147,6 @@ enum DecisionPriority {
   URGENT
 }
 
-enum WorkflowRunStatus {
-  REQUESTED
-  RUNNING
-  COMPLETED
-  FAILED
-  TIMED_OUT
-}
-
 enum MemoryCategory {
   SUPPLIER_PREFERENCE
   BUSINESS_RULE
@@ -174,8 +166,6 @@ enum MemorySource {
 
 enum RuleActionType {
   CREATE_DECISION
-  TRIGGER_WORKFLOW
-  SEND_ALERT
   SET_MEMORY
 }
 
@@ -221,15 +211,13 @@ model Tenant {
   analysis_runs      AnalysisRun[]
   generated_insights GeneratedInsight[]
   decision_points    DecisionPoint[]
-  n8n_integration    N8nIntegration?
-  automation_workflows AutomationWorkflow[]
-  workflow_runs      WorkflowRun[]
   business_memories  BusinessMemory[]
   autonomy_config    AutonomyConfig?
   business_rules     BusinessRule[]
   notifications             Notification[]
   notification_preference   NotificationPreference?
   file_connectors    FileConnector[]
+  daily_report       DailyReport?
 
   @@map("tenants")
 }
@@ -615,74 +603,6 @@ model DecisionPoint {
   @@map("decision_points")
 }
 
-model N8nIntegration {
-  id                  String   @id @default(uuid())
-  tenant_id           String   @unique
-  base_url            String
-  api_key_enc         String?
-  callback_secret_enc String?
-  timeout_ms          Int      @default(15000)
-  is_enabled          Boolean  @default(false)
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
-
-  tenant            Tenant               @relation(fields: [tenant_id], references: [id])
-  workflows         AutomationWorkflow[]
-  workflow_runs     WorkflowRun[]
-
-  @@map("n8n_integrations")
-}
-
-model AutomationWorkflow {
-  id               String   @id @default(uuid())
-  tenant_id        String
-  integration_id   String
-  key              String
-  name             String
-  description      String?
-  webhook_path     String
-  workflow_version String   @default("v1")
-  is_enabled       Boolean  @default(false)
-  trigger_source   String   @default("EVENT")
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  tenant        Tenant         @relation(fields: [tenant_id], references: [id])
-  integration   N8nIntegration @relation(fields: [integration_id], references: [id], onDelete: Cascade)
-  workflow_runs WorkflowRun[]
-
-  @@unique([tenant_id, key])
-  @@index([tenant_id, is_enabled])
-  @@map("automation_workflows")
-}
-
-model WorkflowRun {
-  id               String            @id @default(uuid())
-  tenant_id        String
-  integration_id   String
-  workflow_id      String?
-  workflow_key     String
-  workflow_version String
-  trigger_event    String
-  status           WorkflowRunStatus @default(REQUESTED)
-  external_run_id  String?
-  request_payload  Json              @default("{}")
-  response_payload Json?
-  error_message    String?
-  started_at       DateTime?
-  completed_at     DateTime?
-  created_at       DateTime          @default(now())
-  updated_at       DateTime          @updatedAt
-
-  tenant      Tenant             @relation(fields: [tenant_id], references: [id])
-  integration N8nIntegration     @relation(fields: [integration_id], references: [id], onDelete: Cascade)
-  workflow    AutomationWorkflow? @relation(fields: [workflow_id], references: [id], onDelete: SetNull)
-
-  @@index([tenant_id, created_at(sort: Desc)])
-  @@index([workflow_key, status])
-  @@map("workflow_runs")
-}
-
 // ─── Business Memory ──────────────────────────────────────────────────────────
 
 model BusinessMemory {
@@ -848,4 +768,22 @@ model NotificationPreference {
   tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("notification_preferences")
+}
+
+// ─── Daily Briefing ────────────────────────────────────────────────────────────
+
+model DailyReport {
+  id               String   @id @default(uuid())
+  tenant_id        String   @unique
+  is_enabled       Boolean  @default(false)
+  send_time        String   @default("09:00")   // HH:MM in 24h format
+  timezone         String   @default("Asia/Kolkata")
+  email_recipients String[] @default([])
+  last_sent_at     DateTime?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("daily_reports")
 }

@@ -28,8 +28,16 @@ function buildMiddleware(
     try {
       await limiter.consume(keyFn(req));
       next();
-    } catch {
-      next(new AppError('RATE_LIMIT_EXCEEDED', 'Too many requests. Please slow down.', 429));
+    } catch (err: unknown) {
+      // RateLimiterRedis throws a RateLimiterRes object when the limit is exceeded.
+      // If the thrown value has a msBeforeNext property it's a real rate-limit hit.
+      // Any other error (e.g. Redis connection failure) should fail open — let the
+      // request through rather than blocking all traffic when Redis is unavailable.
+      if (err !== null && typeof err === 'object' && 'msBeforeNext' in err) {
+        next(new AppError('RATE_LIMIT_EXCEEDED', 'Too many requests. Please slow down.', 429));
+      } else {
+        next();
+      }
     }
   };
 }

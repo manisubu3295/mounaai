@@ -579,7 +579,7 @@ export function KPIsPage() {
               analysis to detect when metrics breach warning or critical levels.
             </p>
           </div>
-          <Button onClick={() => setView({ mode: 'edit', kpi: null })}>
+          <Button onClick={() => setView({ mode: 'edit', kpi: null })} className="whitespace-nowrap flex-shrink-0">
             <Plus className="w-4 h-4 mr-2" />
             New KPI
           </Button>
