@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -6,10 +6,12 @@ import {
   Archive, Trash2, Pencil, PanelLeft, LayoutDashboard,
   Lightbulb, ClipboardList, Bell, GitBranch, Target,
   ChevronDown, FlaskConical, Sun, Moon, CalendarClock,
+  User, LogOut,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn, groupChatsByDate } from '@/lib/utils';
 import { listChats, createChat, updateChat, deleteChat } from '@/services/chat.service';
+import { logout } from '@/services/auth.service';
 import { getUnreadCount } from '@/services/notification.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
@@ -133,7 +135,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, clearAuth } = useAuthStore();
   const { sidebarOpen, toggleSidebar, openUpgradeModal } = useUIStore();
   const { theme, toggleTheme } = useThemeStore();
 
@@ -148,6 +150,26 @@ export function Sidebar() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [userMenuOpen]);
+
+  const handleLogout = async () => {
+    try { await logout(); } catch { /* ignore – clear locally regardless */ }
+    clearAuth();
+    navigate('/login');
+    setUserMenuOpen(false);
+  };
 
   const { data } = useQuery({
     queryKey: ['chats'],
@@ -429,12 +451,63 @@ export function Sidebar() {
       </div>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <div className="border-t border-[hsl(var(--border))] p-2 flex-shrink-0">
+      <div className="border-t border-[hsl(var(--border))] p-2 flex-shrink-0 relative" ref={userMenuRef}>
+
+        {/* User dropdown menu */}
+        {userMenuOpen && (
+          <div className="absolute bottom-full left-2 right-2 mb-1 bg-[hsl(var(--surface))] border border-[hsl(var(--border))] rounded-lg shadow-lg overflow-hidden z-50">
+            {/* User info header */}
+            <div className="px-3 py-2.5 border-b border-[hsl(var(--border))]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--accent)/0.9)] to-[hsl(233,80%,72%)] flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+                  {userInitial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-[hsl(var(--text-primary))] truncate leading-tight">
+                    {user?.full_name ?? user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[10.5px] text-[hsl(var(--text-disabled))] truncate leading-tight">{user?.email}</p>
+                </div>
+              </div>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Badge
+                  variant={user?.plan === 'FREE' ? 'free' : 'pro'}
+                  className="cursor-default"
+                  onClick={() => user?.plan === 'FREE' ? openUpgradeModal() : undefined}
+                >
+                  {user?.plan}
+                </Badge>
+                <span className="text-[10.5px] text-[hsl(var(--text-disabled))]">
+                  {user?.role === 'TENANT_ADMIN' ? 'admin' : 'member'}
+                </span>
+              </div>
+            </div>
+
+            {/* Profile */}
+            <button
+              onClick={() => { navigate('/settings/profile'); setUserMenuOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--surface-2))] hover:text-[hsl(var(--text-primary))] transition-colors"
+            >
+              <User className="w-3.5 h-3.5 flex-shrink-0" />
+              Profile
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-[hsl(var(--error))] hover:bg-[hsl(var(--error)/0.08)] transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
+              Log out
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-1.5 px-1">
 
-          {/* User info */}
+          {/* User info — click opens menu */}
           <button
-            onClick={() => user?.plan === 'FREE' ? openUpgradeModal() : undefined}
+            onClick={() => setUserMenuOpen((v) => !v)}
             className="flex items-center gap-2 flex-1 min-w-0 py-1 px-1.5 rounded-lg hover:bg-[hsl(var(--surface-2))] transition-colors text-left"
           >
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[hsl(var(--accent)/0.9)] to-[hsl(233,80%,72%)] flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">

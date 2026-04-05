@@ -22,6 +22,7 @@ import { DailyBriefingPage } from '@/pages/settings/DailyBriefingPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { SimulatePage } from '@/pages/SimulatePage';
 import { AnalysisRunDetailPage } from '@/pages/analysis/AnalysisRunDetailPage';
+import { ProfilePage } from '@/pages/settings/ProfilePage';
 import { Layout } from '@/components/shared/Layout';
 
 function AuthGate() {
@@ -118,6 +119,7 @@ export default function App() {
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/simulate" element={<SimulatePage />} />
               <Route path="/analysis-runs/:id" element={<AnalysisRunDetailPage />} />
+              <Route path="/settings/profile" element={<ProfilePage />} />
             </Route>
           </Route>
 

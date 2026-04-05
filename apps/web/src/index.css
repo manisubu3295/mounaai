@@ -55,21 +55,21 @@
 
   /* ── Light theme ──────────────────────────────────────── */
   [data-theme="light"] {
-    /* Surfaces */
-    --background:      216 22% 96%;
-    --surface:           0  0% 100%;
-    --surface-2:       216 16% 93%;
-    --surface-3:       216 14% 87%;
+    /* Surfaces — deliberately muted to avoid harsh all-white glare */
+    --background:      220 18% 90%;
+    --surface:         220 14% 95%;
+    --surface-2:       220 12% 87%;
+    --surface-3:       220 10% 81%;
 
     /* Borders */
-    --border:          216 12% 85%;
-    --border-strong:   216 12% 74%;
+    --border:          220 10% 76%;
+    --border-strong:   220 10% 65%;
 
     /* Text */
     --foreground:      222 22% 11%;
     --text-primary:    222 22% 11%;
-    --text-secondary:  220 10% 40%;
-    --text-disabled:   220  8% 60%;
+    --text-secondary:  220 10% 38%;
+    --text-disabled:   220  8% 56%;
 
     /* Accent / Brand */
     --accent:          233 68% 58%;
@@ -93,7 +93,7 @@
     --muted-foreground:    var(--text-secondary);
     --destructive:         var(--error);
     --destructive-foreground: 0 0% 100%;
-    --input:               216 16% 97%;
+    --input:               220 14% 93%;
     --ring:                var(--accent);
 
     /* Geometry */
