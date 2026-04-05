@@ -163,6 +163,59 @@ export async function fetchConnectorDataForTenant(tenantId: string): Promise<Rec
   return data;
 }
 
+/**
+ * Walk connector data and return all leaf field paths a rule condition can reference.
+ * Arrays are represented with a [*] wildcard token so users know they can iterate them.
+ * e.g. "DummyJSON Sales.Sales Product Catalog.products.[*].stock"
+ */
+function extractFieldPaths(value: unknown, prefix: string, paths: string[], depth = 0): void {
+  if (depth > 6) return; // safety cap
+  if (value === null || value === undefined) {
+    paths.push(prefix);
+  } else if (Array.isArray(value)) {
+    paths.push(`${prefix}.[*]`);
+    if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+      for (const key of Object.keys(value[0] as Record<string, unknown>)) {
+        extractFieldPaths((value[0] as Record<string, unknown>)[key], `${prefix}.[*].${key}`, paths, depth + 1);
+      }
+    }
+  } else if (typeof value === 'object') {
+    for (const key of Object.keys(value as Record<string, unknown>)) {
+      extractFieldPaths((value as Record<string, unknown>)[key], `${prefix}.${key}`, paths, depth + 1);
+    }
+  } else {
+    paths.push(prefix);
+  }
+}
+
+/** Returns all available field paths from live connector data for use in the rule builder UI. */
+export async function getConnectorFieldPaths(tenantId: string): Promise<Array<{ path: string; example: string | null }>> {
+  const { data } = await fetchAllConnectorData(tenantId);
+  const paths: string[] = [];
+  for (const [topKey, value] of Object.entries(data)) {
+    extractFieldPaths(value, topKey, paths);
+  }
+  // Deduplicate and sort
+  const unique = [...new Set(paths)].sort();
+  // Build example values
+  return unique.map(path => {
+    const parts = path.split('.');
+    let cur: unknown = data;
+    for (const part of parts) {
+      if (part === '[*]') {
+        cur = Array.isArray(cur) ? cur[0] : undefined;
+      } else if (cur !== null && typeof cur === 'object' && !Array.isArray(cur)) {
+        cur = (cur as Record<string, unknown>)[part];
+      } else {
+        cur = undefined;
+        break;
+      }
+    }
+    const example = cur !== null && cur !== undefined && typeof cur !== 'object' ? String(cur) : null;
+    return { path, example };
+  });
+}
+
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildAnalysisPrompt(

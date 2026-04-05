@@ -11,10 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
-  listRules, createRule, updateRule, deleteRule, testRule,
+  listRules, createRule, updateRule, deleteRule, testRule, listConnectorFields,
   type BusinessRule, type CreateRuleInput, type RuleActionType,
   type ConditionNode, type RuleConditionLeaf, type RuleConditionGroup,
-  type ConditionOperator,
+  type ConditionOperator, type ConnectorField,
 } from '@/services/rules.service';
 
 // ─── Styled native select (matches design system) ─────────────────────────────
@@ -101,19 +101,45 @@ function ConditionLeaf({
   node,
   onChange,
   onRemove,
+  fields = [],
 }: {
   node: RuleConditionLeaf;
   onChange: (n: RuleConditionLeaf) => void;
   onRemove: () => void;
+  fields?: ConnectorField[];
 }) {
+  const listId = 'connector-fields-list';
+  const matchedField = fields.find(f => f.path === node.field);
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <Input
-        placeholder="connector.field.path"
-        value={node.field}
-        onChange={(e) => onChange({ ...node, field: e.target.value })}
-        className="w-48 font-mono text-xs"
-      />
+    <div className="flex items-start gap-2 flex-wrap">
+      <div className="flex flex-col gap-0.5">
+        <div className="relative">
+          <Input
+            placeholder="connector.field.path"
+            value={node.field}
+            onChange={(e) => onChange({ ...node, field: e.target.value })}
+            className="w-56 font-mono text-xs pr-6"
+            list={fields.length > 0 ? listId : undefined}
+          />
+          {fields.length > 0 && (
+            <datalist id={listId}>
+              {fields.map(f => (
+                <option key={f.path} value={f.path}>
+                  {f.example !== null ? `= ${f.example}` : ''}
+                </option>
+              ))}
+            </datalist>
+          )}
+        </div>
+        {matchedField?.example !== null && matchedField?.example !== undefined && (
+          <span className="text-[10px] text-[hsl(var(--text-disabled))] font-mono pl-1 truncate max-w-[14rem]">
+            current: {matchedField.example}
+          </span>
+        )}
+        {fields.length === 0 && (
+          <span className="text-[10px] text-[hsl(var(--text-disabled))] pl-1">Add a connector to see available fields</span>
+        )}
+      </div>
       <Sel
         value={node.operator}
         onChange={(v) => {
@@ -146,11 +172,13 @@ function ConditionGroup({
   onChange,
   onRemove,
   depth = 0,
+  fields = [],
 }: {
   node: RuleConditionGroup;
   onChange: (n: RuleConditionGroup) => void;
   onRemove?: () => void;
   depth?: number;
+  fields?: ConnectorField[];
 }) {
   function updateChild(index: number, updated: ConditionNode | null) {
     if (updated === null) {
@@ -221,8 +249,7 @@ function ConditionGroup({
               key={i}
               node={child}
               onChange={(updated) => updateChild(i, updated)}
-              onRemove={() => updateChild(i, null)}
-            />
+              onRemove={() => updateChild(i, null)}              fields={fields}            />
           ) : (
             <ConditionGroup
               key={i}
@@ -230,6 +257,7 @@ function ConditionGroup({
               onChange={(updated) => updateChild(i, updated)}
               onRemove={() => updateChild(i, null)}
               depth={depth + 1}
+              fields={fields}
             />
           )
         )}
@@ -394,6 +422,12 @@ function RuleEditor({
 }) {
   const [form, setForm] = useState<RuleFormState>(rule ? ruleToForm(rule) : blankForm());
 
+  const { data: fields = [] } = useQuery({
+    queryKey: ['connector-fields'],
+    queryFn: listConnectorFields,
+    staleTime: 60_000,
+  });
+
   function set<K extends keyof RuleFormState>(key: K, value: RuleFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -521,9 +555,10 @@ function RuleEditor({
         <CardHeader>
           <CardTitle className="text-base">When (Condition)</CardTitle>
           <CardDescription>
-            Rule fires when these conditions match live connector data. Use dot-notation field paths,
-            e.g. <code className="bg-[hsl(var(--surface-2))] px-1 rounded text-xs">ERP.stock.paracetamol</code>.
-            Field paths must match the connector name and endpoint/query name.
+            Rule fires when these conditions match live connector data.
+            Start typing in the field box — available paths from your connectors will appear as suggestions.
+            Use <code className="bg-[hsl(var(--surface-2))] px-1 rounded text-xs">[*]</code> to match any item in an array,
+            e.g. <code className="bg-[hsl(var(--surface-2))] px-1 rounded text-xs">DummyJSON Sales.Sales Product Catalog.products.[*].stock</code>.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -532,12 +567,14 @@ function RuleEditor({
               node={form.condition}
               onChange={(updated) => set('condition', updated)}
               depth={0}
+              fields={fields}
             />
           ) : (
             <ConditionGroup
               node={{ type: 'group', logic: 'AND', conditions: [form.condition] }}
               onChange={(updated) => set('condition', updated)}
               depth={0}
+              fields={fields}
             />
           )}
         </CardContent>

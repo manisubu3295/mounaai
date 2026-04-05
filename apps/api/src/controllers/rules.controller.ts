@@ -4,7 +4,7 @@ import { requireAdmin } from '../middleware/rbac.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { createRuleSchema, updateRuleSchema } from '../validation/rules.schema.js';
 import * as rulesEngine from '../services/rules-engine.service.js';
-import { fetchConnectorDataForTenant } from '../services/analysis-engine.service.js';
+import { fetchConnectorDataForTenant, getConnectorFieldPaths } from '../services/analysis-engine.service.js';
 import { NotFoundError } from '../types/errors.js';
 import { z } from 'zod';
 
@@ -79,6 +79,14 @@ rulesRouter.delete('/:id', requireAdmin, async (req: Request, res: Response, nex
     const deleted = await rulesEngine.deleteRule(req.user!.tenant_id, req.params['id']!);
     if (!deleted) throw new NotFoundError('Business rule');
     res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// GET /api/v1/rules/fields — list all available field paths from live connector data
+rulesRouter.get('/fields', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fields = await getConnectorFieldPaths(req.user!.tenant_id);
+    res.json({ success: true, data: { fields } });
   } catch (err) { next(err); }
 });
 

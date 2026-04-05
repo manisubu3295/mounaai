@@ -146,11 +146,35 @@ function formatRule(r: {
 }
 
 /**
- * Resolve a dot-notation field path into nested connector data.
- * e.g. "ERP.stock_levels.paracetamol" → data["ERP.stock_levels"]["paracetamol"]
+ * Walk a single path segment into a value, supporting [*] wildcard on arrays.
+ * Returns an array of values when a wildcard is encountered.
+ */
+function walkSegment(current: unknown, key: string): unknown {
+  if (key === '[*]') {
+    if (Array.isArray(current)) return current;
+    return undefined;
+  }
+  if (Array.isArray(current)) {
+    // Propagate through an already-expanded array (e.g. after [*])
+    return current.map(item =>
+      (item !== null && typeof item === 'object')
+        ? (item as Record<string, unknown>)[key]
+        : undefined
+    );
+  }
+  if (current !== null && typeof current === 'object' && !Array.isArray(current)) {
+    return (current as Record<string, unknown>)[key];
+  }
+  return undefined;
+}
+
+/**
+ * Resolve a dot-notation field path (with optional [*] wildcards) into connector data.
+ * e.g. "DummyJSON Sales.Sales Product Catalog.products.[*].stock"
+ *      → array of every product's stock value
  *
- * The connector data top-level keys are already "connector.endpoint" (with a dot),
- * so we try the longest prefix first that matches a top-level key.
+ * The connector data top-level keys contain dots ("ConnectorName.EndpointName"),
+ * so we try the longest matching prefix first.
  */
 function resolveField(data: Record<string, unknown>, fieldPath: string): unknown {
   // First try: top-level key matches exactly
@@ -158,19 +182,16 @@ function resolveField(data: Record<string, unknown>, fieldPath: string): unknown
     return data[fieldPath];
   }
 
-  // Try longest-prefix match against connector data keys (keys contain dots)
+  // Split on '.' but keep '[*]' as its own token
+  // e.g. "A.B.products.[*].rating" → ["A", "B", "products", "[*]", "rating"]
   const parts = fieldPath.split('.');
+
+  // Try longest-prefix match against connector data keys (keys contain dots)
   for (let i = parts.length - 1; i >= 1; i--) {
     const topKey = parts.slice(0, i).join('.');
     if (Object.prototype.hasOwnProperty.call(data, topKey)) {
-      const nested = data[topKey];
       const remainder = parts.slice(i);
-      return remainder.reduce((acc: unknown, key) => {
-        if (acc !== null && typeof acc === 'object' && !Array.isArray(acc)) {
-          return (acc as Record<string, unknown>)[key];
-        }
-        return undefined;
-      }, nested);
+      return remainder.reduce((acc: unknown, key) => walkSegment(acc, key), data[topKey]);
     }
   }
 
@@ -182,6 +203,12 @@ function resolveField(data: Record<string, unknown>, fieldPath: string): unknown
 function evaluateLeaf(leaf: RuleConditionLeaf, data: Record<string, unknown>): boolean {
   const actual = resolveField(data, leaf.field);
   const expected = leaf.value;
+
+  // If resolveField returned an array (from a [*] wildcard), evaluate the condition
+  // against every item — the rule matches if ANY item satisfies the condition.
+  if (Array.isArray(actual)) {
+    return actual.some(item => evaluateLeaf({ ...leaf, field: '__value__' }, { __value__: item }));
+  }
 
   const coerceNumber = (value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) return value;

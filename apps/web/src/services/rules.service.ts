@@ -80,3 +80,13 @@ export async function testRule(id: string): Promise<RuleTestResult> {
   const res = await apiClient.post<{ data: RuleTestResult }>(`/rules/${id}/test`);
   return res.data.data;
 }
+
+export interface ConnectorField {
+  path: string;
+  example: string | null;
+}
+
+export async function listConnectorFields(): Promise<ConnectorField[]> {
+  const res = await apiClient.get<{ data: { fields: ConnectorField[] } }>('/rules/fields');
+  return res.data.data.fields;
+}
