@@ -41,6 +41,15 @@ rulesRouter.post(
   }
 );
 
+// GET /api/v1/rules/fields — list all available field paths from live connector data
+// MUST be before /:id to prevent Express matching "fields" as an id param
+rulesRouter.get('/fields', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fields = await getConnectorFieldPaths(req.user!.tenant_id);
+    res.json({ success: true, data: { fields } });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/rules/:id — get single rule
 rulesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -79,14 +88,6 @@ rulesRouter.delete('/:id', requireAdmin, async (req: Request, res: Response, nex
     const deleted = await rulesEngine.deleteRule(req.user!.tenant_id, req.params['id']!);
     if (!deleted) throw new NotFoundError('Business rule');
     res.json({ success: true });
-  } catch (err) { next(err); }
-});
-
-// GET /api/v1/rules/fields — list all available field paths from live connector data
-rulesRouter.get('/fields', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const fields = await getConnectorFieldPaths(req.user!.tenant_id);
-    res.json({ success: true, data: { fields } });
   } catch (err) { next(err); }
 });
 
