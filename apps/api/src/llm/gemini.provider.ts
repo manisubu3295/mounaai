@@ -263,9 +263,9 @@ export class GeminiProvider implements ILLMProvider {
       const msg = err.response?.data?.error?.message ?? err.message;
       if (status === 400) return new LLMError(`Gemini bad request: ${msg}`, 'RESPONSE_MALFORMED');
       if (status === 401 || status === 403) return new LLMError('Invalid Gemini API key', 'INVALID_API_KEY');
-      if (status === 429) return new LLMError('Gemini rate limit exceeded', 'RATE_LIMIT_EXCEEDED', true);
+      if (status === 429) return new LLMError(`Gemini quota/rate-limit error (429): ${msg}`, 'RATE_LIMIT_EXCEEDED', true);
       if (err.code === 'ECONNABORTED') return new LLMError('Gemini request timed out', 'TIMEOUT');
-      return new LLMError(`Gemini provider error: ${msg}`, 'PROVIDER_UNREACHABLE', true);
+      return new LLMError(`Gemini provider error (${status ?? err.code}): ${msg}`, 'PROVIDER_UNREACHABLE', true);
     }
     return err instanceof Error ? err : new Error(String(err));
   }

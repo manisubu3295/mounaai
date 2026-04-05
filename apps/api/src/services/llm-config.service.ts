@@ -114,6 +114,7 @@ export async function testLlmConfig(tenantId: string): Promise<{ status: 'OK' | 
 
     return { status: 'OK' };
   } catch (err) {
+    console.error('[LLM test] connection test failed:', err);
     await prisma.providerConfig.update({
       where: { id: config.id },
       data: { test_status: 'FAILED', last_tested_at: new Date() },
