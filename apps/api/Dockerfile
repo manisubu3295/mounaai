@@ -47,5 +47,7 @@ EXPOSE 4000
 # Switch into the api workspace so pnpm-linked binaries and relative paths work
 WORKDIR /app/apps/api
 
-# Use the local prisma binary directly — never npx (which downloads latest)
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/server.js"]
+COPY --from=build /app/apps/api/entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+CMD ["sh", "entrypoint.sh"]
