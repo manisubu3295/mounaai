@@ -121,9 +121,11 @@ export default function App() {
               <Route path="/simulate" element={<SimulatePage />} />
               <Route path="/analysis-runs/:id" element={<AnalysisRunDetailPage />} />
               <Route path="/settings/profile" element={<ProfilePage />} />
-              <Route path="/guide" element={<UserGuidePage />} />
             </Route>
           </Route>
+
+          {/* Public standalone — no auth, no sidebar */}
+          <Route path="/guide" element={<UserGuidePage />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

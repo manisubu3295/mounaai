@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +58,13 @@ export function LoginPage() {
         <p className="text-[11px] text-[hsl(var(--text-disabled))]">
           &copy; {new Date().getFullYear()} Aadhirai Innovations
         </p>
+        <Link
+          to="/guide"
+          className="flex items-center gap-1.5 text-[11.5px] text-[hsl(var(--text-disabled))] hover:text-[hsl(var(--accent-hover))] transition-colors"
+        >
+          <BookOpen className="w-3 h-3" />
+          User Guide
+        </Link>
       </div>
 
       {/* Right panel — form */}
@@ -136,6 +143,12 @@ export function LoginPage() {
               Don&apos;t have an account?{' '}
               <Link to="/register" className="text-[hsl(var(--accent-hover))] hover:underline font-medium">
                 Request access
+              </Link>
+            </p>
+            <p className="text-center text-[12px] text-[hsl(var(--text-secondary))] mt-2">
+              <Link to="/guide" className="inline-flex items-center gap-1 text-[hsl(var(--text-disabled))] hover:text-[hsl(var(--accent-hover))] transition-colors">
+                <BookOpen className="w-3 h-3" />
+                View User Guide
               </Link>
             </p>
           </div>
