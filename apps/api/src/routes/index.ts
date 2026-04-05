@@ -15,6 +15,7 @@ import { notificationRouter } from '../controllers/notification.controller.js';
 import { userRouter } from '../controllers/user.controller.js';
 import { simulateRouter } from '../controllers/simulate.controller.js';
 import { dailyReportRouter } from '../controllers/daily-report.controller.js';
+import { demoHrRouter } from '../controllers/demo-hr.controller.js';
 
 export const apiRouter: ExpressRouter = Router();
 
@@ -34,3 +35,5 @@ apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/users', userRouter);
 apiRouter.use('/simulate', simulateRouter);
 apiRouter.use('/daily-report', dailyReportRouter);
+// Public demo data — no auth required
+apiRouter.use('/demo/hr', demoHrRouter);
