@@ -11,10 +11,10 @@ export const createKpiSchema = z.object({
   description: z.string().max(1000).optional(),
   formula: z.string().min(1).max(2000),
   unit: z.string().max(50).optional(),
-  target_value: z.number().optional(),
-  warning_threshold: z.number().optional(),
-  critical_threshold: z.number().optional(),
-  owner_role: z.enum(['TENANT_ADMIN', 'ANALYST', 'VIEWER']).optional(),
+  target_value: z.number().nullable().optional(),
+  warning_threshold: z.number().nullable().optional(),
+  critical_threshold: z.number().nullable().optional(),
+  owner_role: z.enum(['TENANT_ADMIN', 'ANALYST', 'VIEWER']).nullable().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
 });
 
