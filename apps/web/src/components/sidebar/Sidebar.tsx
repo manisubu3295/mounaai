@@ -6,7 +6,7 @@ import {
   Archive, Trash2, Pencil, PanelLeft, LayoutDashboard,
   Lightbulb, ClipboardList, Bell, GitBranch, Target,
   ChevronDown, FlaskConical, Sun, Moon, CalendarClock,
-  User, LogOut,
+  User, LogOut, BookOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn, groupChatsByDate } from '@/lib/utils';
@@ -482,6 +482,15 @@ export function Sidebar() {
                 </span>
               </div>
             </div>
+
+            {/* User Guide */}
+            <button
+              onClick={() => { navigate('/guide'); setUserMenuOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--surface-2))] hover:text-[hsl(var(--text-primary))] transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+              User Guide
+            </button>
 
             {/* Profile */}
             <button
